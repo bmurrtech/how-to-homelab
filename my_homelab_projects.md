@@ -3,7 +3,7 @@ See MikeRoyal's [Master HomeLab Guide](https://github.com/mikeroyal/Self-Hosting
 
 - [x] [Set up secure tunnel via CloudFlare's DNS](https://www.youtube.com/watch?v=ey4u7OUAF3c)
 - [x] [Expose Proxmox hypervisor to the internet](https://www.youtube.com/watch?v=ey4u7OUAF3c)
-- [x] Setup MFA to connect to [Cloudflare Tunnel](https://github.com/bmurrtech/Self-Hosting-Guide/blob/main/cloudflare.md)
+- [x] Setup MFA to connect to [Cloudflare Tunnel](https://github.com/bmurrtech/how-to_homelab/blob/main/how-to_cloudflare.md)
 - [ ] Create Ubuntu Desktop VM and add:
   - [ ] RSS Feed Reader
   - [ ] Live [Stock Ticker in terminal](https://github.com/bmurrtech/mind-dump/blob/main/rtsp_rss_feed.md)
