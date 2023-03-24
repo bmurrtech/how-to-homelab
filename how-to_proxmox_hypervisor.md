@@ -3,9 +3,8 @@
 - [Creating a ZFS Pool](#zfs-configuration)
 - [Create Cloud Image VM Template](#create-cloud-image-vms)
 - [Access Your Lab Anywhere](#remote-access)
-- [Homelab Cybersecurity](#secure-homelab)
-- [Block Ads](#ad-blocking)
-- [VNC, RDP, SSH - Remotely Control VMs](#vnc)
+- [Ansible Automation Setup](#ansible)
+- [Create a Kubernetes Cluster](#kubernetes)
 
 
 # ProxMox Install 
@@ -256,9 +255,14 @@ See [FileZilla's How-to](https://wiki.filezilla-project.org/Howto) for more deta
 ![sftp_filezilla](https://i.imgur.com/raDY9mj.png)
 
 # Remote Access
+If you want to securely access and work on your Proxmox hypervisor on-the-go, there's Cloudflare and Tailscale to make this possible. 
 
-#### Cloudflare DDNS Reverse Proxy
-- Instead of Tailscale or enduring the ardous process of installing an enterprise-grade load-balancer like Kemp, you can get a DDNS and reverse proxy setup via CloudFlare in 15 minutes. See my [Cloudflare documentation](https://github.com/bmurrtech/how-to_homelab/blob/main/how-to_cloudflare.md) for more details on how to setup a Cloudflare tunnel and securing your homelab.
+#### Cloudflare
+Cloudflare acts as a DDNS Reverse Proxy to allow you a domain-joined URL to securely access your Proxmox server from anywhere.
+
+- Instead of enduring the ardous process of installing an enterprise-grade load-balancer like Kemp, you can get a DDNS and reverse proxy setup via CloudFlare in 15 minutes.
+  - If you want to know how to set up an entrpirse loadbalancer for Proxmox, [see my how-to setup Kemp guide](https://github.com/bmurrtech/how-to-homelab/blob/main/how-to_kemp_loadmaster.md
+- See my [Cloudflare documentation](https://github.com/bmurrtech/how-to_homelab/blob/main/how-to_cloudflare.md) for more details on how to setup a Cloudflare tunnel and securing your homelab.
 - [NetworkChuck made a video tutorial](https://www.youtube.com/watch?v=ey4u7OUAF3c) about this, but here's the steps:
 
 > Note: You must buy a domain and create a Cloudflare Nameserver (DNS > Records > Nameservers).
@@ -268,5 +272,118 @@ See [FileZilla's How-to](https://wiki.filezilla-project.org/Howto) for more deta
  - To contine the process, see my [Cloudflare documentation](https://github.com/bmurrtech/how-to_homelab/blob/main/how-to_cloudflare.md)
 
 #### Apache Guacamole
+[placeholder]
 
 #### TailScale
+[placeholder]
+
+# Ansible
+Ansible is an automation tool that will be needed for running handy playbooks to install a K3S high-availability cluster and run all your self-hosted web applications.
+
+- Thanks to [TechnoTim for his expensive how-to Ansible guide](https://docs.technotim.live/posts/ansible-automation/). I will be referencing it for my guide.
+- First, create a new VM to install Ansible on. I suggest you __clone the cloud init template__ that we created earlier. See [Create Cloud Image VM Template](#create-cloud-image-vms) for more info.
+- Once inside your Linux environment, run the following commands:
+
+1. Update your Linux
+```
+sudo apt update
+```
+
+2. Install Dependencies
+```
+sudo apt install software-properties-common
+
+```
+
+3. Add Ansible Repo
+```
+sudo apt-add-repository --yes --update ppa:ansible/ansible
+```
+
+4. Install Ansible
+```
+sudo apt install ansible
+```
+
+5. Install `sshpass` (if needed) 
+```
+sudo apt install sshpass
+```
+
+- Once Ansible is installed, you can run some staus check commands:
+```
+ansible --version
+```
+- Take special note of the Python version. Your server will need Python __3.5__ _at least_ to run Ansible.
+
+> If Ansible or Python is not the version you want, check to see where it is installed:
+> ```
+> which ansible
+> ```
+> To remove that version:
+> ```
+> sudo apt remove ansible
+> ```
+> Check if it is removed. You should see `ansible not found`:
+> ```
+> which ansible
+> ```
+> Install `pip`
+> ```
+> curl https://bootstrap.pypa.io/get-pip.py -o get-pip.py
+> ```
+> Re-install Ansible
+> ```
+> python3 -m pip install --user ansible
+> ```
+> And, confirm your Ansible version:
+> ```
+> andible --version
+> ```
+- From here, proceed to the Kubernetes section to use TechnoTim's Ansible setup playbook for your Proxmox server.
+
+
+#### Custom Play Books
+- If you want to create custom playbooks, you'll need a good text editor to create the `.yml ` files for Ansible configuration. You can use [Visual Sutdio Code | VSCode editor](https://code.visualstudio.com/) or any other editor of your choice.
+- See the [official Ansible site for powerful playbook parameters](https://docs.ansible.com/ansible/latest/cli/ansible-playbook.html) you can utilize.
+- Also, see [TechnoTim's Anisbile documentation](https://docs.technotim.live/posts/ansible-automation/#installing-the-latest-version-of-ansible) and [his GitHub](https://github.com/techno-tim) on customizing and creating Ansible playbooks.
+
+# Kubernetes
+Kubernetes is a Greek word κυβερνήτης, meaning “helmsman” or “pilot”. As the name entails, it is a powerful, serverless orchestration tool for managing multiple nodes in a cluster to provide high-availability, scalable web application services. Sound amazing? Why not add it to your homelab? Let's go!
+
+- Start by forking and cloning [TechnoTim's Ansible repo](https://github.com/techno-tim/k3s-ansible). Give it a star! He earned it! Here's the command to clone it to your Ansible VM:
+```
+git clone https://github.com/techno-tim/k3s-ansible
+```
+- Next, create a local copy on your machine:
+```
+cp ansible.example.cfg ansible.cfg
+```
+- It's time to install some requirements for `ansible`. Customize the following command to your liking:
+```
+ansible-proxmox install -r ./collections/requirements.yml
+```
+- Now, you'll need to `cd` into the repo you cloned and `cp` the `sample` directory within the `inventory` directory.
+```
+cp -R inventory/sample inventory/my-cluster
+```
+- Once copied, you must edit the `inventory/my-cluster/hosts.ini` to match your network environment. This file supports DNS also. So, if you are using Pi-hole and Unbound, add the DNS address in this file.
+
+Example:
+```
+[master]
+192.168.30.38
+192.168.30.39
+192.168.30.40
+
+[node]
+192.168.30.41
+192.168.30.42
+
+[k3s_cluster:children]
+master
+node
+```
+
+> Cluster Config File Note: You will need to enter the IP addresses of the VMs you wish to use as the masters and the IP addresses of the VMs you wish to use as nodes. This will be different for every Proxmox environment, and it may be helpful to set these as static IP addresses inside your router settings for future use.
+
