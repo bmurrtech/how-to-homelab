@@ -17,6 +17,7 @@ See MikeRoyal's [Master HomeLab Guide](https://github.com/mikeroyal/Self-Hosting
 - [x] [Expose Proxmox hypervisor to the internet](https://www.youtube.com/watch?v=ey4u7OUAF3c)
 - [x] Setup MFA to connect to [Cloudflare Tunnel](https://github.com/bmurrtech/how-to_homelab/blob/main/how-to_cloudflare.md)
 - [x] Create [Proxmox Ubuntu 20.04 LTS Cloud Init Template](https://github.com/bmurrtech/how-to-homelab/blob/main/how-to_proxmox_hypervisor.md#create-cloud-image-vms)
+- [ ] Create a Cloud init VM for [Ansible, the agentless automation tool](https://docs.technotim.live/posts/ansible-automation/)
 - [ ] Create HA Kubernetes cluster via Ansible playbook; [see Techno Tim's doc](https://docs.technotim.live/posts/k3s-etcd-ansible/)
 - [ ] [Install Rancher on top of Kubernetes cluster](https://ranchermanager.docs.rancher.com/v2.5/pages-for-subheaders/install-upgrade-on-a-kubernetes-cluster)
 - [x] Create Ubuntu Desktop VM and setup:
