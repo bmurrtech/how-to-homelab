@@ -370,10 +370,11 @@ cp -R inventory/sample inventory/my-cluster
 - Once copied, you must edit the `inventory/my-cluster/hosts.ini` to match your network environment. This file supports DNS also. So, if you are using Pi-hole and Unbound, add the DNS address in this file.
 
 ![k3s_embedded_database](https://i.imgur.com/CrErJsy.png)
+
 This [diagram](https://docs.k3s.io/architecture) shows an example of a cluster that has a single-node K3s server with an embedded SQLite database.
 
 Example:
-```
+```ini
 [master]
 192.168.30.38
 192.168.30.39
