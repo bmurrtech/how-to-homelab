@@ -364,7 +364,9 @@ mv ./sample ./my-cluster
 ```
 vim hosts.ini
 ```
-- Inside this file, you must modify the default IP address as to match the actual IP address of the VMs to match. Example:
+- Inside this file, you must modify the default IP address as to match the actual IP address of the VMs to match.
+
+__Example:__
 ```ini
 [master]
 192.168.30.38
@@ -378,6 +380,21 @@ master
 node
 ```
 > Cluster Config File Note: You will need to enter the IP addresses of the VMs you wish to use as the masters and the IP addresses of the VMs you wish to use as nodes. This will be different for every Proxmox environment, and it may be helpful to set these as static IP addresses inside your router settings for future use.
+
+- With the `hosts.ini` customized to your network environment, you are now ready to configure and customize your Ansible `.yml` file which is inside the `./my-cluster/group_vars` folder.
+```
+cd group_vars
+vim all.yml
+```
+
+- Once inside the `.yml` file, you will be greeted by a wall of text that needs to be customized. At this point, it is helpful to reference the Ansible `.yml` file [creator's video](https://youtu.be/CbkEWcUZ7zM?t=395) for better insight, but here are the steps to take:
+
+- The `falnnel_iface` is responisible for layer 3 communications between the VMs in the cluster. This should be the same ethernet intervace as the VMs.
+- Set your timezone (i.e `America/Chicago` or `America/New_York`).
+- Set the public IP address you wish to use as your virtual IP address that will be created for the k3s cluster: `apiserver_endpoint: "<your_IP>"`
+- Generate and set a `k3s_token`. This is essentially an alpha-numeric (no special characters) string/password. For example: `K108a732b7cfb59036f2362848d61823733359bbdf152192f7ebc6ad4b3078fd659`. Do __NOT__ use this password or you could get hacked.
+
+__[WIP]__
 
 - Change the `<proxmox_name>` to your liking.
 ```
