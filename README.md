@@ -16,15 +16,16 @@ See MikeRoyal's [Master HomeLab Guide](https://github.com/mikeroyal/Self-Hosting
 - [x] [Set up secure tunnel via CloudFlare's DNS](https://www.youtube.com/watch?v=ey4u7OUAF3c)
 - [x] [Expose Proxmox hypervisor to the internet](https://www.youtube.com/watch?v=ey4u7OUAF3c)
 - [x] Setup MFA to connect to [Cloudflare Tunnel](https://github.com/bmurrtech/how-to_homelab/blob/main/how-to_cloudflare.md)
-- [ ] Create Ubuntu Desktop VM and add:
-  - [ ] RSS Feed Reader
+- [x] Create [Proxmox Ubuntu 20.04 LTS Cloud Init Template](https://github.com/bmurrtech/how-to-homelab/blob/main/how-to_proxmox_hypervisor.md#create-cloud-image-vms)
+- [ ] Create HA Kubernetes cluster via Ansible playbook; [see Techno Tim's doc](https://docs.technotim.live/posts/k3s-etcd-ansible/)
+- [ ] [Install Rancher on top of Kubernetes cluster](https://ranchermanager.docs.rancher.com/v2.5/pages-for-subheaders/install-upgrade-on-a-kubernetes-cluster)
+- [x] Create Ubuntu Desktop VM and setup:
   - [ ] Live [Stock Ticker in terminal](https://github.com/bmurrtech/mind-dump/blob/main/rtsp_rss_feed.md)
   - [ ] [Scrolling RSS Feed](https://github.com/bmurrtech/mind-dump/blob/main/rtsp_rss_feed.md)
   - [ ] [OBS screen capture](https://resources.antmedia.io/docs/simulcasting-to-social-media-channels) and also see [this](https://medium.com/@khan_honney/webrtc-replay-from-obs-hosted-rtmp-stream-b995d168497)
   - [ ] Stream to [Ant Media Server](https://github.com/bmurrtech/mind-dump/blob/main/rtsp_rss_feed.md)
   - [ ] Upload [stream to YouTube](https://resources.antmedia.io/docs/simulcasting-to-social-media-channels) for 24/7 RSS and stock ticker
-- [ ] Create HA Kubernetes cluster via Ansible playbook; [see Techno Tim's doc](https://docs.technotim.live/posts/k3s-etcd-ansible/)
-- [ ] [Install Rancher on top of Kubernetes cluster](https://ranchermanager.docs.rancher.com/v2.5/pages-for-subheaders/install-upgrade-on-a-kubernetes-cluster)
+  - [ ] RSS Feed Reader
 - [ ] Build Docker containers via Rancher w/K3S to run all the following web apps:
   - [ ] Secure network access via [TailScale](https://tailscale.com/kb/1039/install-ubuntu-2004/)
   - [ ] Reverse Proxy via:
