@@ -64,6 +64,7 @@ Hint: try: zpool import -R /rpool -N rpool
  - b) edit /etc/default/zfs, set ZFS_INITRD_PRE_MOUNTROOT_SLEEP='4', and then issue a "update-initramfs -k 4.2.6-1-pve -u"
 
 # ZFS Configuration
+See the [ZFS Proxmox Wiki](https://pve.proxmox.com/wiki/ZFS_on_Linux) for more details and commands. 
 
 #### Creating a ZFS Pool and Cache
 > Note:  RAID0 forces stripped drives to the _smallest_ drive size (i.e. 2TB + 118GB = 118GB storage pool size).
@@ -111,8 +112,10 @@ zfs status [pool_name] -t
 zfs set volsize=[number_in_GBs]G [pool_name]/[dataset_name]/[VM_disk_name]
 # example environment command
 zfs set volsize=5G rpool/vm/base-8000-disk-0
+# get command
+zfs get volsize | refreservation | used <pool>/vm-<vmid>-disk-X
 ```
-> Error: This command doesn't seem to work currenlty. The command produces a __"cannot open...dataset does not exist__ error message.
+> Error: These commands do not seem to work currenlty. Bug? The command produces a __"cannot open...dataset does not exist__ error message.
 
 #### Move the Root Disk of VMs
 - Navigate to > Datacenter > PVE Node > [VM] > Resources > Click on Root Disk > Click on Volume Action (button) > Move Storage > Target Storage (dropdown) > Select the `VM` dataset > Check the Delete source (box) > Move Volume (button).
@@ -233,12 +236,10 @@ qm template [vm_id]
 qm clone 8000 [new_vm_id] --name [vm_name]
 ```
 
-#### Increase Disk Space
-
 > Note: Disk must be formated to __QEMU__/__qcow2__ to be able to resize. VMDK format will not work.
 
 - By default, the VM will not have much hard drive space unless you chagned the settings prior to saving this template.
-- Therfore, you must add more storage to the VM. It's not difficult. Navigat to > VM > Hardware > Hard Disk > Disk Action (top, button dropdown) > Resize > Add the desired amount.
+- Therefore, you must add more storage to the VM. It's not difficult. Navigat to > VM > Hardware > Hard Disk > Disk Action (top, button dropdown) > Resize > Add the desired amount.
 
 > Note: Decreasing the disk space is more difficult than increasing, so don't give it more than necessary, and you can always increase it later if needed.
 
