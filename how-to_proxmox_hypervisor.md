@@ -258,14 +258,14 @@ See [FileZilla's How-to](https://wiki.filezilla-project.org/Howto) for more deta
 # Remote Access
 
 #### Cloudflare DDNS Reverse Proxy
-- Instead of Tailscale or enduring the ardous process of installing an enterprise-grade load-balancer like Kemp, you can get a DDNS and reverse proxy setup via CloudFlare in 15 minutes. See my [Cloudflare documentation](https://github.com/bmurrtech/Self-Hosting-Guide/blob/main/cloudflare.md) for more details on how to setup a Cloudflare tunnel and securing your homelab.
+- Instead of Tailscale or enduring the ardous process of installing an enterprise-grade load-balancer like Kemp, you can get a DDNS and reverse proxy setup via CloudFlare in 15 minutes. See my [Cloudflare documentation](https://github.com/bmurrtech/how-to_homelab/blob/main/how-to_cloudflare.md) for more details on how to setup a Cloudflare tunnel and securing your homelab.
 - [NetworkChuck made a video tutorial](https://www.youtube.com/watch?v=ey4u7OUAF3c) about this, but here's the steps:
 
 > Note: You must buy a domain and create a Cloudflare Nameserver (DNS > Records > Nameservers).
 
 - Copy the nameservers and add them to your domain registrar (nameserver updates can take up to 24hrs, but it is usually updated within minutes).
 - Using [ZeroTrust](https://one.dash.cloudflare.com/899e8be9fba8f3cc125ebdf9263380e0/home/quick-start) create a new tunnel: [ZeroTrust](https://i.imgur.com/FipaEgQ.png) (left navigation pane) > Cloudflare ZeroTrust (navigation pane) > Access (dropdown) > [Tunnels](https://i.imgur.com/nnONYTE.png) > Create at tunnel (button)
- - To contine the process, see my [Cloudflare documentation](https://github.com/bmurrtech/Self-Hosting-Guide/blob/main/cloudflare.md)
+ - To contine the process, see my [Cloudflare documentation](https://github.com/bmurrtech/how-to_homelab/blob/main/how-to_cloudflare.md)
 
 #### Apache Guacamole
 
