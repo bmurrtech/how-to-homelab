@@ -349,7 +349,7 @@ ansible --version
 - Also, see [TechnoTim's Anisbile documentation](https://docs.technotim.live/posts/ansible-automation/#installing-the-latest-version-of-ansible) and [his GitHub](https://github.com/techno-tim) on customizing and creating Ansible playbooks.
 
 # Kubernetes
-Kubernetes is a Greek word κυβερνήτης, meaning “helmsman” or “pilot”. As the name entails, it is a powerful, serverless orchestration tool for managing multiple nodes in a cluster to provide high-availability, scalable web application services. Sound amazing? Why not add it to your homelab? Let's go!
+Kubernetes is a Greek word κυβερνήτης, meaning “helmsman” or “pilot”. As the name entails, it is a powerful, serverless orchestration tool for managing multiple nodes in a cluster to provide high-availability, scalable web application services. In this use-case, we are rock'n [K3s](https://docs.k3s.io/). Sound amazing? Why not add it to your homelab? Let's go!
 
 - Start by forking and cloning [TechnoTim's Ansible repo](https://github.com/techno-tim/k3s-ansible). Give it a star! He earned it! Here's the command to clone it to your Ansible VM:
 ```
@@ -368,6 +368,9 @@ ansible-proxmox install -r ./collections/requirements.yml
 cp -R inventory/sample inventory/my-cluster
 ```
 - Once copied, you must edit the `inventory/my-cluster/hosts.ini` to match your network environment. This file supports DNS also. So, if you are using Pi-hole and Unbound, add the DNS address in this file.
+
+![k3s_embedded_database](https://i.imgur.com/CrErJsy.png)
+This [diagram](https://docs.k3s.io/architecture) shows an example of a cluster that has a single-node K3s server with an embedded SQLite database.
 
 Example:
 ```
