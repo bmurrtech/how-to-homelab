@@ -1,7 +1,7 @@
 # Table of Contents
 - [ProxMox Hypervisor Installation](#proxmox-install)
 - [Creating a ZFS Pool](#zfs-configuration)
-- [Create Cloud Image VM Template](#create-cloud-image-vms)
+- [Create Cloud Init Cloud Image Template](#cloud-init-vms)
 - [Access Your Lab Anywhere](#remote-access)
 - [Ansible Automation Setup](#ansible)
 - [Create a Kubernetes Cluster](#kubernetes)
@@ -130,118 +130,83 @@ zfs get volsize | refreservation | used <pool>/vm-<vmid>-disk-X
 - To restore a backup, navigate to: Datacenter > [proxmox_node_name] > Click on Backups (ZFS dataset) > Backups (menu option on right) > Click on the backup file (ending in `.tar.zst`) > Click Restore (button, top) > Storage: VM (_not_ local) > CT: Enter the desired number (100-999) > Check the "Start after restore" box (if desired) > Do not change the default priviledge settings > Click Restore (button)
 - Now, wait for the backup to be restored and you should eventually see it populate under the Datacenter > Proxmox Node > [VM/Container_Name]
 
-# Create Cloud Image VMs
+# Cloud Init Template
 
-> Cloud images and cloud init work together to make lightweight, optimized, distibutions for super-fast deployment possible. Cloud services such AWS, Azure, GCP, etc use cloud init to provision Linux machines and more. To tap into that power, we can create the perfect Proxmox tempate for launching these cloud images for all subesquent VMs we may want to spin up. There's [reference documentation](https://pve.proxmox.com/pve-docs/qm.1.html), but here's how:
+> Cloud images and cloud init work together to make lightweight, optimized, distributions for super-fast deployment possible. Cloud services such AWS, Azure, GCP, etc use cloud init to provision Linux machines and more. To tap into that power, we can create the perfect Proxmox template for launching these cloud images for all subsequent VMs we may want to spin up. There's [reference documentation](https://pve.proxmox.com/pve-docs/qm.1.html), but here's how:
 
 - Find a focal (current) cloud distro you want. I went with [Ubuntu 20.04](https://cloud-images.ubuntu.com/daily/server/focal/current/).
 - Inside this focal cloud folder, you scroll until you find the [focal-server-cloudimg.amd64.img](https://i.imgur.com/XKVAyIP.png) file and then __copy the URL__ and __paste__ it in a note for later (this image will be used as the hardrive of our vitrual machines).
 - Open up the shell or SSH into your Proxmox server, and type `wget` followed by a space and then the that URL link to the cloud `.img` file. Here is a sample of that command:
-
 Ubuntu __18.04__ LTS
 ```
 wget https://cloud-images.ubuntu.com/bionic/current/bionic-server-cloudimg-amd64.img
 ```
-
 Ubuntu __20.04__ LTS
 ```
 wget https://cloud-images.ubuntu.com/daily/server/focal/current/focal-server-cloudimg-amd64.img
 ```
-
-- Wait for the image to download to your Proxmox server. Next, we need to run the following command to create a virtual machine and attach that image to this VM:  
+- Wait for the image to download to your Proxmox server. Next, we need to run the following command to create a virtual machine and attach that image to this VM:  
 ```
 qm create 8000 --memory 2048 --name 20.04-server --net0 virtio,bridge=vmbr0
 ```
-
 > You can always change the name in the GUI, but you can't change the ID: `8000` is the ID of the template. This can be whatever you wish, but I set mine to a high number to distinguish it as a template.
-
-- If you ran the command successfully, you should now see that VM listed under your Proxmox node, but we aren't finished yet. Next, we to set the disk storage: 
-
+- If you ran the command successfully, you should now see that VM listed under your Proxmox node, but we aren't finished yet. Next, we to set the disk storage: 
 ```
 qm importdisk 8000 focal-server-cloudimg-amd64.img vm --format qcow2
 ```
-
-> Note: You can also upload this ISO to a different storage dataset (i.e. local-lvm). Also, any mispellings or deviations from the precise `img` file name will produce errors. Make sure you type in the right `<source>` name.
-
+> Note: You can also upload this ISO to a different storage dataset (i.e. local-lvm). Also, any misspellings or deviations from the precise `img` file name will produce errors. Make sure you type in the right `<source>` name.
 - I had issues trying to run the `qm set --scsi0` command, so I suggest using the GUI to assign the Cloud drive to the VM.
-
 ![gui_scsi](https://i.imgur.com/o4eyart.png)
-
 - To do this, navitagte to: Datacenter > Node > VM ("8000") > Hardware > click on Unused Disk > Edit (button) and select "SCSI" and "0" from the dropdown menus. Do not change any other settings here, and click the _Add_ button. You should now see the unused disk disappear and the [Hard Disk appear in the VM](https://i.imgur.com/p1D3l8l.png).
 - Now, we need to create a virtual CD-ROM and attach it to the VM template we created:
-
 ```
 qm set 8000 -ide2 vm:cloudinit
 ```
-
 - The following command enables our VM to boot from the cloud drive. As an added bonus, it will speed up boot times.
-
 ```
 qm set 8000 --boot c --bootdisk scsi0
 ```
-
 - Next, let's create a serial console for the added ability of the web VNC capability to see the terminal.
-
 ```
 qm set 8000 --serial0 socket --vga serial0`
 ```
-
 - Return to the Proxmox GUI > Datacenter > Node > ubuntu-cloud VM > Cloud-init (menu), and you should now see a the cloud icon for this VM.
-
 ![cloud_init_settings](https://i.imgur.com/lukuLXY.png)
-
 - Edit the Cloud-init settings as follows:
-  - _User_: `admin`
-  - _Password_: `<your_password>` (you can modify this later in VM > Cloud-init > Password and then reboot the VM)
-  - _Host_: Leave as default or customize to your preference
-  - _SSH Public Key_: `ssh-rsa[insert_your_public_SSH_key]`. You can readily find documentation on [how to generate a SSH Public key using PuTTYgen](https://docs.digitalocean.com/products/droplets/how-to/add-ssh-keys/create-with-putty/).
-
+  - _User_: `admin`
+  - _Password_: `<your_password>` (you can modify this later in VM > Cloud-init > Password and then reboot the VM)
+  - _Host_: Leave as default or customize to your preference
+  - _SSH Public Key_: `ssh-rsa[insert_your_public_SSH_key]`. You can readily find documentation on [how to generate a SSH Public key using PuTTYgen](https://docs.digitalocean.com/products/droplets/how-to/add-ssh-keys/create-with-putty/).
 > Proxmox SSH Key ZFS Bug: When attempting to add a public key, I got the following error: _SSH public key validation error (500)_ . As it turns out, [this is a known bug](https://bugzilla.proxmox.com/show_bug.cgi?id=1188), but it does appear to be fixed. _Make sure to select_ Key > __SSH-2 RSA__ > RSA (radio button) when generating your SSH keys _or else it will not work._ Your public key should start with `ssh-rsa`. See example PuTTYGen screenshot below, and don't forget to password protect and save your private key.
-
 ![ssh_2_RSA](https://i.imgur.com/xbsItrt.png)
-
-  - _IP Config: IPv4_ `DHCP` (radio selector). Note: The default IP value is nothing, so will not get any network access at all by default. Therefore, __you must set it to DHCP__ at or edit the values manually.
-
+  - _IP Config: IPv4_ `DHCP` (radio selector). Note: The default IP value is nothing, so will not get any network access at all by default. Therefore, __you must set it to DHCP__ at or edit the values manually.
 ![ip_dhcp](https://i.imgur.com/KJN61by.png)
-
 - Change the SCSI Controller from the default setting to VirtIO SCSI from the Proxmox GUI.
-
 ![VirtIO_SCSI](https://i.imgur.com/Exs2OAE.png)
-
 > CAUTION: Do __not__ start the VM. If started, it will be boostrap the machine ID and UUID.
-
 - In the end, you should have a hardware configuration that looks similar to this:
- 
+ 
 ![cloud-hardware](https://i.imgur.com/JAX8z1Q.png).
-
 - Of course, you can play with the default CPU, RAM, and disk space settings, but if anything else looks off, modify the VM to match or delete the VM and start from scratch (it's not that hard).
 - When you are 100% satisfied with the results, right-click the ubuntu-cloud VM and click "Convert to template" or:
-
 ```
 qm template [vm_id]
 ```
-
 - You should see the icon change to a paper icon with a monitor, indicating that it has become a template.
-
 
 #### Cloning Cloud Template
 - Proxmox has [documentation on the process here](https://pve.proxmox.com/wiki/Cloud-Init_Support).
 - Either clone via the GUI:
-
 ![clone_GUI_mode](https://i.imgur.com/RBwBLCy.png)
-
 - Or via CLI:
-
 ```
 qm clone 8000 [new_vm_id] --name [vm_name]
 ```
-
-> Note: Disk must be formated to __QEMU__/__qcow2__ to be able to resize. VMDK format will not work.
-
-- By default, the VM will not have much hard drive space unless you chagned the settings prior to saving this template.
-- Therefore, you must add more storage to the VM. It's not difficult. Navigat to > VM > Hardware > Hard Disk > Disk Action (top, button dropdown) > Resize > Add the desired amount.
-
+> Note: Disk must be formatted to __QEMU__/__qcow2__ to be able to resize. VMDK format will not work.
+- By default, the VM will not have much hard drive space unless you changed the settings prior to saving this template.
+- Therefore, you must add more storage to the VM. It's not difficult. Navigate to > VM > Hardware > Hard Disk > Disk Action (top, button dropdown) > Resize > Add the desired amount.
 > Note: Decreasing the disk space is more difficult than increasing, so don't give it more than necessary, and you can always increase it later if needed.
+
 
 #### SSH to VM
 > Tip: You can always generate or add key pairs to a server via SCP, see [Step 2 of this article](https://www.digitalocean.com/community/tutorials/how-to-configure-ssh-key-based-authentication-on-a-linux-server#step-2-copying-an-ssh-public-key-to-your-server)
@@ -313,7 +278,6 @@ sudo apt update
 2. Install Dependencies
 ```
 sudo apt install software-properties-common
-
 ```
 
 3. Add Ansible Repo
@@ -323,12 +287,12 @@ sudo apt-add-repository --yes --update ppa:ansible/ansible
 
 4. Install Ansible
 ```
-sudo apt install ansible
+sudo apt install ansible -y
 ```
 
 5. Install `sshpass` (if needed) 
 ```
-sudo apt install sshpass
+sudo apt install sshpass -y
 ```
 
 - Once Ansible is installed, you can run some staus check commands:
@@ -363,7 +327,6 @@ ansible --version
 > ```
 - From here, proceed to the Kubernetes section to use TechnoTim's Ansible setup playbook for your Proxmox server.
 
-
 #### Custom Play Books
 - If you want to create custom playbooks, you'll need a good text editor to create the `.yml ` files for Ansible configuration. You can use [Visual Sutdio Code | VSCode editor](https://code.visualstudio.com/) or any other editor of your choice.
 - See the [official Ansible site for powerful playbook parameters](https://docs.ansible.com/ansible/latest/cli/ansible-playbook.html) you can utilize.
@@ -372,29 +335,41 @@ ansible --version
 # Kubernetes
 Kubernetes is a Greek word κυβερνήτης, meaning “helmsman” or “pilot”. As the name entails, it is a powerful, serverless orchestration tool for managing multiple nodes in a cluster to provide high-availability, scalable web application services. In this use-case, we are rock'n [K3s](https://docs.k3s.io/). Sound amazing? Why not add it to your homelab? Let's go!
 
-- Start by forking and cloning [TechnoTim's Ansible repo](https://github.com/techno-tim/k3s-ansible). Give it a star! He earned it! Here's the command to clone it to your Ansible VM:
+- Start by creating five new VMs and naming them. See my cloud init template guide for a super-fast way to create new lightweight VMs.
+- Once the VMs are created, use the Proxmox console (button), login, and __take note of each server IP address__. You will need this later! 
+- Remote back into you __Ansible server__ and `cd` to your user directory `cd /home/<user>`.
+- Create a subfolder for Techno Tim's Ansible playbook; something like: `mkdir ttansible` will do, then `cd` into that folder.
+- Next, want to clone [TechnoTim's Ansible repo](https://github.com/techno-tim/k3s-ansible) to this directory. Give it a star! He earned it! Here's the command to clone it to your Ansible VM:
 ```
 git clone https://github.com/techno-tim/k3s-ansible
 ```
-- Next, create a local copy on your machine:
+- After the repo clones to your machine, check the directory with an `ls` command and then `cd` into that repo folder you just cloned.
+- Once inside the reop clone folder, `ls` again and you should now see `ansible.example.cfg`.
+- Let's create a local copy of this `.cfg` file on your machine:
+- 
 ```
 cp ansible.example.cfg ansible.cfg
 ```
-- It's time to install some requirements for `ansible`. Customize the following command to your liking:
-```
-ansible-proxmox install -r ./collections/requirements.yml
-```
-- Now, you'll need to `cd` into the repo you cloned and `cp` the `sample` directory within the `inventory` directory.
-```
-cp -R inventory/sample inventory/my-cluster
-```
-- Once copied, you must edit the `inventory/my-cluster/hosts.ini` to match your network environment. This file supports DNS also. So, if you are using Pi-hole and Unbound, add the DNS address in this file.
 
-![k3s_embedded_database](https://i.imgur.com/CrErJsy.png)
+- Once you sucessfully made a copy of the `.cfg`, now you must customize/adapte the file to your personal evironment. `nano` or `vim` that `ansible.cfg` file copy you just made to get started.
+```
+cat ansible.cfg
+```
 
-This [diagram](https://docs.k3s.io/architecture) shows an example of a cluster that has a single-node K3s server with an embedded SQLite database.
+- The file should read: __`inventory = inventory/my-cluster/hosts.ini`__. If this is the case, do __NOT__ change anything. If `cat` prints something else, modify the file to read as __`inventory = inventory/my-cluster/hosts.ini`__. Otherwise, leave this default setting as we will modify the directory to match.
+- Exit the `.cfg` file, and create the following directories:
+```
+cd inventory
+mv ./sample ./my-cluster
+```
+> Note: The `rename` command may not be available on your Linux distro. If that is the case, you can either A) use `mv` instead. B) Install `rename` via `sudo apt install rename`, and try again.
 
-Example:
+- Now, customize the `hosts.ini` file using `nano` or `vim`.
+```
+vim hosts.ini
+```
+
+- Inside this file, you must modify the default IP address as to match the actual IP address of the VMs to match. Example:
 ```ini
 [master]
 192.168.30.38
@@ -411,4 +386,21 @@ node
 ```
 
 > Cluster Config File Note: You will need to enter the IP addresses of the VMs you wish to use as the masters and the IP addresses of the VMs you wish to use as nodes. This will be different for every Proxmox environment, and it may be helpful to set these as static IP addresses inside your router settings for future use.
+
+
+- Change the `<proxmox_name>` to your liking.
+```
+ansible-<proxmox_name> install -r ./collections/requirements.yml
+```
+
+- Now, you'll need to `cd` into the repo you cloned and `cp` the `sample` directory within the `inventory` directory.
+```
+cp -R inventory/sample inventory/my-cluster
+```
+
+- Once copied, you must edit the `inventory/my-cluster/hosts.ini` to match your network environment. This file supports DNS also. So, if you are using Pi-hole and Unbound, add the DNS address in this file.
+
+![k3s_embedded_database](https://i.imgur.com/CrErJsy.png)
+
+This [diagram](https://docs.k3s.io/architecture) shows an example of a cluster that has a single-node K3s server with an embedded SQLite database.
 
