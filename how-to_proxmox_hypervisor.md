@@ -334,9 +334,8 @@ ansible --version
 
 # Kubernetes
 Kubernetes is a Greek word κυβερνήτης, meaning “helmsman” or “pilot”. As the name entails, it is a powerful, serverless orchestration tool for managing multiple nodes in a cluster to provide high-availability, scalable web application services. In this use-case, we are rock'n [K3s](https://docs.k3s.io/). Sound amazing? Why not add it to your homelab? Let's go!
-
 - Start by creating five new VMs and naming them. See my cloud init template guide for a super-fast way to create new lightweight VMs.
-- Once the VMs are created, use the Proxmox console (button), login, and __take note of each server IP address__. You will need this later! 
+- Once the VMs are created, use the Proxmox console (button), login, and __take note of each server IP address__. You will need this later! 
 - Remote back into you __Ansible server__ and `cd` to your user directory `cd /home/<user>`.
 - Create a subfolder for Techno Tim's Ansible playbook; something like: `mkdir ttansible` will do, then `cd` into that folder.
 - Next, want to clone [TechnoTim's Ansible repo](https://github.com/techno-tim/k3s-ansible) to this directory. Give it a star! He earned it! Here's the command to clone it to your Ansible VM:
@@ -346,16 +345,14 @@ git clone https://github.com/techno-tim/k3s-ansible
 - After the repo clones to your machine, check the directory with an `ls` command and then `cd` into that repo folder you just cloned.
 - Once inside the reop clone folder, `ls` again and you should now see `ansible.example.cfg`.
 - Let's create a local copy of this `.cfg` file on your machine:
-- 
+- 
 ```
 cp ansible.example.cfg ansible.cfg
 ```
-
-- Once you sucessfully made a copy of the `.cfg`, now you must customize/adapte the file to your personal evironment. `nano` or `vim` that `ansible.cfg` file copy you just made to get started.
+- Once you successfully made a copy of the `.cfg`, now you must customize/adapt the file to your personal environment. `nano` or `vim` that `ansible.cfg` file copy you just made to get started.
 ```
 cat ansible.cfg
 ```
-
 - The file should read: __`inventory = inventory/my-cluster/hosts.ini`__. If this is the case, do __NOT__ change anything. If `cat` prints something else, modify the file to read as __`inventory = inventory/my-cluster/hosts.ini`__. Otherwise, leave this default setting as we will modify the directory to match.
 - Exit the `.cfg` file, and create the following directories:
 ```
@@ -363,44 +360,34 @@ cd inventory
 mv ./sample ./my-cluster
 ```
 > Note: The `rename` command may not be available on your Linux distro. If that is the case, you can either A) use `mv` instead. B) Install `rename` via `sudo apt install rename`, and try again.
-
 - Now, customize the `hosts.ini` file using `nano` or `vim`.
 ```
 vim hosts.ini
 ```
-
 - Inside this file, you must modify the default IP address as to match the actual IP address of the VMs to match. Example:
 ```ini
 [master]
 192.168.30.38
 192.168.30.39
 192.168.30.40
-
 [node]
 192.168.30.41
 192.168.30.42
-
 [k3s_cluster:children]
 master
 node
 ```
-
 > Cluster Config File Note: You will need to enter the IP addresses of the VMs you wish to use as the masters and the IP addresses of the VMs you wish to use as nodes. This will be different for every Proxmox environment, and it may be helpful to set these as static IP addresses inside your router settings for future use.
-
 
 - Change the `<proxmox_name>` to your liking.
 ```
 ansible-<proxmox_name> install -r ./collections/requirements.yml
 ```
-
 - Now, you'll need to `cd` into the repo you cloned and `cp` the `sample` directory within the `inventory` directory.
 ```
 cp -R inventory/sample inventory/my-cluster
 ```
-
 - Once copied, you must edit the `inventory/my-cluster/hosts.ini` to match your network environment. This file supports DNS also. So, if you are using Pi-hole and Unbound, add the DNS address in this file.
-
 ![k3s_embedded_database](https://i.imgur.com/CrErJsy.png)
-
 This [diagram](https://docs.k3s.io/architecture) shows an example of a cluster that has a single-node K3s server with an embedded SQLite database.
 
