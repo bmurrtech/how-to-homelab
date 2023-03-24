@@ -77,7 +77,7 @@ Hint: try: zpool import -R /rpool -N rpool
 
 #### Adding a Cache Drive
 - Using SSH or the console, type the following: `zpool create rpool /dev/[primary_drive_name] cache /dev/[cache_drive_name]
-- Type `zpool status tank` for an overivew of your new ZFS pool with cache.
+- Type `zpool status [pool_name]` for an overivew of your new ZFS pool with cache.
 
 #### Create ZFS Datasets
 - You can view your current ZFS pool via `zpool list` and `zfs list`. Take note of the `mountpoint` name (if you created a ZFS pool at installation, this will be called `rpool` by default).
@@ -93,6 +93,26 @@ Hint: try: zpool import -R /rpool -N rpool
   - ID: `backups` | Directory: `/rpool/backups` | Disk Image: `VZDump backup file` and `Snippets`
  - See an [example configuration here](https://i.imgur.com/T9JzxXK.png).
  - Once the new ZFS Datasets have been successfully mapped to your Datacenter, you should [see them listed in the left navigation pane](https://i.imgur.com/1eOFcHR.png).
+
+#### Change VM ZFS Disk Size
+- If the disk type is `QEMU` or `qcow2`, you can change the disk size on the fly.
+- To add disk space, navigate to the VM > Hardware > Hard Disk > Disk Action (dropdown button) > Resize. Then add more GB by increments of 1.
+- To decrease the disk size, it is trickier because you have to use the Proxmox terminal and commands.
+  - First, check your ZFZ pool supports trimming.
+
+```
+zfs status [pool_name] -t
+```
+  - You should see some indication i.e. "untrimmed" or "trim unsupported". If you see "unsupported" then you likely have a RAID controller instead of an HBA and you cannot resize the pool.
+  - Next, find the VM disk name from the storage pool: Datacenter > Node > Where you store VMs drives > VM Disks > Locate the VM disk name.
+  - Next, open the console for the Proxmox server and enter the following command to resize:
+
+```
+zfs set volsize=[number_in_GBs]G [pool_name]/[dataset_name]/[VM_disk_name]
+# example environment command
+zfs set volsize=5G rpool/vm/base-8000-disk-0
+```
+> Error: This command doesn't seem to work currenlty. The command produces a __"cannot open...dataset does not exist__ error message.
 
 #### Move the Root Disk of VMs
 - Navigate to > Datacenter > PVE Node > [VM] > Resources > Click on Root Disk > Click on Volume Action (button) > Move Storage > Target Storage (dropdown) > Select the `VM` dataset > Check the Delete source (box) > Move Volume (button).
