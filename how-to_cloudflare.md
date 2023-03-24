@@ -39,13 +39,17 @@
 > Note: Cloudflare will only send a PIN to the email(s) you whitelisted.
 - Check your email for a PIN; enter it and you're in!
 
-#### Authelia
+### Authelia
 - [Authelia](https://authelia.com) is a SSO (Single Sign-on: requiring one-time signin for wide-range of apps via a session cookie) which supports 2FA/MFa and password reset. Authelia also prevents brute-force login attempts. It's the perfect gateway secuirty solution for homelabs (and businesses).
 - There are two options to implementing Authelia in your homelab environment: 
  - [Authelia + Dashy](https://dashy.to/docs/authentication/)
  - Authelia + Cloudflare
 - Since we want the ability to access our homelab applications from the public internet, and since we are utlilizing Cloudflare as a reverse proxy and DDNS to make that possible (because most ISPs periodically change tenants public IPs), the Authelia + Cloudflare integration is ideal.
 - For integrating Authelia with Cloudflare, see Tamimology's [incredible Authelia + Cloudflare guide](https://github.com/tamimology/cloudflare-authelia)
+
+#### Authelia + Cloudflare
+Authelia integration with Cloudflare's free Zero Trust Tunnel service. Both [Authelia](https://developers.cloudflare.com/cloudflare-one/identity/idp-integration/generic-oidc/) and [Cloudflare](https://developers.cloudflare.com/cloudflare-one/identity/idp-integration/generic-oidc/) have set-up documentation.
+- Login to Cloudflare and navitage to: Zero Trust > Settings (under Zero Trust overivew) > > Login Methods > Add new (button) > OpenID Connect > Enter all parameters.
 
 #### IP Blocking
 - In Cloudflare's settings, you can create default rules and group polices to block non-whitelisted IP address from accessing your homelab services
