@@ -14,6 +14,7 @@ This work is licensed under a
 - [How-to Remotely Access Your Servers via Cloudflare](https://github.com/bmurrtech/how-to-homelab/blob/main/how-to_cloudflare.md)
 - [How-to Make a 24-7 Youtube Livestream](https://github.com/bmurrtech/how-to-homelab/blob/main/how-to_24-7_livestream.md)
 - [How-to Create a Flux Node on Proxmox](https://github.com/bmurrtech/how-to-homelab/blob/main/how-to_flux_proxmox_node.md)
+- [How-to Setup Kemp Load-balancer](https://github.com/bmurrtech/how-to-homelab/blob/main/how-to_kemp_loadmaster.md)
 
 # My Homelab Projects To-do
 
