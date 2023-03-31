@@ -9,7 +9,13 @@ This work is licensed under a
 [cc-by-nc-sa-image]: https://licensebuttons.net/l/by-nc-sa/4.0/88x31.png
 [cc-by-nc-sa-shield]: https://img.shields.io/badge/License-CC%20BY--NC--SA%204.0-lightgrey.svg
 
-# My Homelab Projects & Guides
+# Homelab How-to Table of Contents
+- [How-to Create Your Frist Proxmox Hypervisor](https://github.com/bmurrtech/how-to-homelab/blob/main/how-to_proxmox_hypervisor.md)
+- [How-to Remotely Access Your Servers via Cloudflare](https://github.com/bmurrtech/how-to-homelab/blob/main/how-to_cloudflare.md)
+- [How-to Make a 24-7 Youtube Livestream](https://github.com/bmurrtech/how-to-homelab/blob/main/how-to_24-7_livestream.md)
+- [How-to Create a Flux Node on Proxmox](https://github.com/bmurrtech/how-to-homelab/blob/main/how-to_flux_proxmox_node.md)
+
+# My Homelab Projects To-do
 
 See MikeRoyal's [Master HomeLab Guide](https://github.com/mikeroyal/Self-Hosting-Guide) for nearly unlimited homelab ideas!
 
