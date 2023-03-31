@@ -28,7 +28,7 @@
  - Remove the installer media after your computer finishes the install and successfully rebootsv (there's a confirmation screen at the end).
  - If everything was successfull, you should see a mostly black login screen (if you don't see this screen, skip to [Installation Issues](Installation-issues) below).
  - After ProxMox has finished installing, it will automatically reboot (reboot manually if it did not).
- - Now, enter the `https://[IP_address_you_set];8006` in a web browser on another machine connected to the same router and network.
+ - Now, enter the `https://[IP_address_you_set]:8006` in a web browser on another machine connected to the same router and network.
  - Enter the IP address you set to access the Proxmox UI (ex. https://192.168.1.100:8006).
 
  > Don't forget to include "https://" and add ":8006" at the end of the IP address.
@@ -38,6 +38,29 @@
 - Next, you will be prompted to login to ProxMox. Input `root` for the username and enter the password you created at setup to gain access.
 
 > Before deploying and VMs, you can consolidate and expand your storage. Do this *before* creating VMs.
+
+### Change Web UI IP Address
+- If another device on the network is using the IP address that you assgined to your new Proxmox server at install, there will be a conflict and you won't be able to access the web UI.
+- I suggest running an [Advance IP Scan](https://www.advanced-ip-scanner.com/) on your network to see what IP ranges are available. Alternatively, you can check your router for current IPs that are taken/available, and once you find an open IP, assign a static IP it to your Proxmox server.
+- But here's how to change the Proxmox web UI IP address:
+  - Login to the terminal of the Proxmox server using your creds.
+  - Next, change the IP address in the network config files to match the IP you want:
+ 
+ ```
+ # change the address line, 6th line down
+ nano /etc/network/interfaces
+ ```
+ 
+ ![interface1](https://i.imgur.com/r6hOhE6.png)
+ 
+ - This is sufficient to regain access to the web UI, however, there is another important step: editing the host file with the hard-coded IP to the new IP.
+ 
+ ```
+ # change the second line to the desired IP address
+ nano /etc/hosts
+ ```
+ 
+  ![interface2](https://i.imgur.com/Y1OWYWD.png)
 
 #### Installation Issues
 - If an install goes ary, you can always use the PrxoMox debug mode built into the bootable .iso installer.
@@ -137,6 +160,7 @@ zfs get volsize | refreservation | used <pool>/vm-<vmid>-disk-X
 - Find a focal (current) cloud distro you want. I went with [Ubuntu 20.04](https://cloud-images.ubuntu.com/daily/server/focal/current/).
 - Inside this focal cloud folder, you scroll until you find the [focal-server-cloudimg.amd64.img](https://i.imgur.com/XKVAyIP.png) file and then __copy the URL__ and __paste__ it in a note for later (this image will be used as the hardrive of our vitrual machines).
 - Open up the shell or SSH into your Proxmox server, and type `wget` followed by a space and then the that URL link to the cloud `.img` file. Here is a sample of that command:
+
 Ubuntu __18.04__ LTS
 ```
 wget https://cloud-images.ubuntu.com/bionic/current/bionic-server-cloudimg-amd64.img
