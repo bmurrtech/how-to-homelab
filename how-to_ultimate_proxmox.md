@@ -203,7 +203,9 @@ qm set 8000 --boot c --bootdisk scsi0
 qm set 8000 --serial0 socket --vga serial0
 ```
 - Return to the Proxmox GUI > Datacenter > Node > ubuntu-cloud VM > Cloud-init (menu), and you should now see a the cloud icon for this VM.
+
 ![cloud_init_settings](https://i.imgur.com/lukuLXY.png)
+
 - Edit the Cloud-init settings as follows:
   - _User_: `admin`
   - _Password_: `<your_password>` (you can modify this later in VM > Cloud-init > Password and then reboot the VM)
