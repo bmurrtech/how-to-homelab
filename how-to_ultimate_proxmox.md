@@ -200,7 +200,7 @@ qm set 8000 --boot c --bootdisk scsi0
 ```
 - Next, let's create a serial console for the added ability of the web VNC capability to see the terminal.
 ```
-qm set 8000 --serial0 socket --vga serial0`
+qm set 8000 --serial0 socket --vga serial0
 ```
 - Return to the Proxmox GUI > Datacenter > Node > ubuntu-cloud VM > Cloud-init (menu), and you should now see a the cloud icon for this VM.
 ![cloud_init_settings](https://i.imgur.com/lukuLXY.png)
