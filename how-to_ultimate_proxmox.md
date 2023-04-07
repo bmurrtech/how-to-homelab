@@ -429,19 +429,23 @@ vim all.yml
 - Generate and set a `k3s_token`. This is essentially an alpha-numeric (no special characters) string/password. For example: `K108a732b7cfb59036f2362848d61823733359bbdf152192f7ebc6ad4b3078fd659`. Do __NOT__ use this password or you could get hacked.
 - - Now, it's time to __add the arguments__. According to TechnoTim, only three arguments are necessary, but the following args are nice additions (staring under the `--disable traefik` line):
 
+> Note: These args will make the clusters more responsive. Because if a node is not ready, it will not schedule new pods until it becomes ready. The timeout is typically 5 minutes. For smaller installations (like our homelab), our service will be down 5 minutes. You may need to tweak these settings depending on your hardware.
+
 ```
   --kube-apiserver-arg default-not-ready-toleration-seconds=30
   --kube-apiserver-arg default-unreachable-toleration-seconds=30
   --kube-controller-arg node-monitor-period=20s
   --kube-controller-arg node-monitor-grace-period=20s
   --kubelet-arg node-status-update-frequency=5s"
-  
-extra_agent_args: "--kubelet-arg node-status-update-frequency=5s"
 ```
-> Note: These args will make the clusters more responsive. Because if a node is not ready, it will not schedule new pods until it becomes ready. The timeout is typically 5 minutes. For smaller installations (like our homelab), our service will be down 5 minutes. You may need to tweak these settings depending on your hardware.
+> Tip: I would advise to comment out the following line: `extra_agent_args: "--kubelet-arg node-status-update-frequency=5s"` becuase I had repeat error messages caused by this argument.
 
 - After modifying the ards, you should get a config that looks like this:
-![extra_k3s_args](https://i.imgur.com/3RpQaOJ.png)
+
+
+![extra_k3s_args](https://i.imgur.com/9ngdzTc.png)
+
+
 - Leave the `kub-vip`, `metallb`, etc. version tags as-is.
 - __Configure the range of IPs__ you wish to reserve for your `metallb` loadbalancer to utilize (this will need to be updated if you have more webservices for your reverse proxy). In my case, reserved `"192.168.1.80-192.168.1.90"`
 - That should complete the `all.yml` configuration. __Write and save it__ if you are satisifed with the results.
@@ -451,7 +455,7 @@ extra_agent_args: "--kubelet-arg node-status-update-frequency=5s"
 ansible-playbook ./site.yml -i ./inventory/my-cluster/hosts.ini
 ```
 
-> Note: Add the additional strings (after the `-i`) `–ask-pass –ask-become-pass` if you are using password SSH login.
+> Note: Add the additional strings `-k --ask-pass --ask-become-pass` at the end of the above command if you are using password SSH login. Use `--private-key [path_to_PRIVATE_KEY], --key-file [path_to_PRIVATE_KEY]` to use the file to authenticate the connection.
 
 - After deployment, the control plane will be accessible via virtual ip address which is defined in `inventory/my-cluster/group_vars/all.yml` as `apiserver_endpoint`. This is the same public IP address that you set earlier.
 
