@@ -416,17 +416,44 @@ node
 > Cluster Config File Note: You will need to enter the IP addresses of the VMs you wish to use as the masters and the IP addresses of the VMs you wish to use as nodes. This will be different for every Proxmox environment, and it may be helpful to set these as static IP addresses inside your router settings for future use.
 
 - With the `hosts.ini` customized to your network environment, you are now ready to configure and customize your Ansible `.yml` file which is inside the `./my-cluster/group_vars` folder.
+
 ```
 cd group_vars
 vim all.yml
 ```
 
 - Once inside the `.yml` file, you will be greeted by a wall of text that needs to be customized. At this point, it is helpful to reference the Ansible `.yml` file [creator's video](https://youtu.be/CbkEWcUZ7zM?t=395) for better insight, but here are the steps to take:
-
 - The `falnnel_iface` is responisible for layer 3 communications between the VMs in the cluster. This should be the same ethernet intervace as the VMs.
-- Set your timezone (i.e `America/Chicago` or `America/New_York`).
-- Set the public IP address you wish to use as your virtual IP address that will be created for the k3s cluster: `apiserver_endpoint: "<your_IP>"`
+- __Set your timezone__ (i.e `America/Chicago` or `America/New_York`).
+- __Set the public IP address__ you wish to use as your virtual IP address that will be created for the k3s cluster: `apiserver_endpoint: "<your_IP>"`
 - Generate and set a `k3s_token`. This is essentially an alpha-numeric (no special characters) string/password. For example: `K108a732b7cfb59036f2362848d61823733359bbdf152192f7ebc6ad4b3078fd659`. Do __NOT__ use this password or you could get hacked.
+- - Now, it's time to __add the arguments__. According to TechnoTim, only three arguments are necessary, but the following args are nice additions (staring under the `--disable traefik` line):
+
+```
+  --kube-apiserver-arg default-not-ready-toleration-seconds=30
+  --kube-apiserver-arg default-unreachable-toleration-seconds=30
+  --kube-controller-arg node-monitor-period=20s
+  --kube-controller-arg node-monitor-grace-period=20s
+  --kubelet-arg node-status-update-frequency=5s"
+  
+extra_agent_args: "--kubelet-arg node-status-update-frequency=5s"
+```
+> Note: These args will make the clusters more responsive. Because if a node is not ready, it will not schedule new pods until it becomes ready. The timeout is typically 5 minutes. For smaller installations (like our homelab), our service will be down 5 minutes. You may need to tweak these settings depending on your hardware.
+
+- After modifying the ards, you should get a config that looks like this:
+![extra_k3s_args](https://i.imgur.com/3RpQaOJ.png)
+- Leave the `kub-vip`, `metallb`, etc. version tags as-is.
+- __Configure the range of IPs__ you wish to reserve for your `metallb` loadbalancer to utilize (this will need to be updated if you have more webservices for your reverse proxy). In my case, reserved `"192.168.1.80-192.168.1.90"`
+- That should complete the `all.yml` configuration. __Write and save it__ if you are satisifed with the results.
+- Now, we need to __start provisioning the cluster__ by using the following command:
+
+```
+ansible-playbook ./site.yml -i ./inventory/my-cluster/hosts.ini
+```
+
+> Note: Add the additional strings (after the `-i`) `–ask-pass –ask-become-pass` if you are using password SSH login.
+
+- After deployment, the control plane will be accessible via virtual ip address which is defined in `inventory/my-cluster/group_vars/all.yml` as `apiserver_endpoint`. This is the same public IP address that you set earlier.
 
 __[WIP]__
 
