@@ -313,7 +313,7 @@ sudo su -
 - To install K3S paste the following command:
 
 ```
-curl -sfl https://get.k3s.io | K3S_KUBECONFIG_MODE="644" sh -s
+curl -sfL https://get.k3s.io | K3S_KUBECONFIG_MODE="644" sh -s
 ```
 
 - __Give the command a minute to run__ and find and download the K3S installation script (it shouldn't take more than a minute). If successful, you should read a message stating, "__Starting k3s__"
@@ -335,7 +335,7 @@ cat /var/lib/rancher/k3s/server/node-token
 - Next, enter the command below to __add this VM as a worker node__.
 
 ```
-curl -sfl https://get.k3s.io | K3S_TOKEN="[YOURTOKEN]" K3S_URL="https://[YOUR_MASTER_NODE_IP]:6443" K3S_NODE_NAME="[YOUR_WORKER_NAME]" sh -
+curl -sfL https://get.k3s.io | K3S_TOKEN="[YOURTOKEN]" K3S_URL="https://[YOUR_MASTER_NODE_IP]:6443" K3S_NODE_NAME="[YOUR_WORKER_NAME]" sh -
 ```
 
 > Check if it worked by running `kubectl get nodes` on the master node. If you see a new node added, then you did it right. Congrats!
@@ -344,7 +344,7 @@ curl -sfl https://get.k3s.io | K3S_TOKEN="[YOURTOKEN]" K3S_URL="https://[YOUR_MA
 
 # Rancher
 Think of Rancher like, well, a rancher herding cattle or a queen bee controlling her worker drone bees. Rancher is a powerful, visual orchestration tool for K3S, and you will want it! Here's how to get it:
-- First, start off by __creating another VM__ to run your Rancher controller (_1CPU and 2-4GB of RAM is sufficient_).
+- First, start off by __creating another VM__ to run your Rancher controller (_2CPU and 4GB of RAM is sufficient, but don't go less than that or you may encounter problems_).
 - Next, SSH into the VM and __create a new directory, `cd` to it, and create a blank file__ as follows:
 
 ```
@@ -368,7 +368,7 @@ tls-san:
 - Once you have saved those conents to the `config.yaml`, __it's time to install Rancher__:
 
 ```
-curl -sfl https://get.rancher.io | sh -
+curl -sfL https://get.rancher.io | sh -
 ```
 
 - __Test if Rancher installed via `rancherd --help`__. If you get a `Rancher Kubernetes Engine` as a return, it is working.
@@ -384,7 +384,7 @@ journalctl -eu rancherd-server -f
 
 > Note: The Rancher installation automatically creates a second K3S cluster that will run alongside the K3S cluster we just created after we add it to the Rancher cluster.
 
-- __Once the logs inidicate that the processes are completely finished hit `CTRL + C`__ to stop the log updates.
+- __Once the logs inidicate that the processes are completely finished hit `CTRL + C`__ to stop the log updates. Specifically look for __Successfully initialized node rancher with cloud provider__ message. 
 - Assuming that Rancher is completely installed, up, and running, it's now time to __reset the default password__ for the Rancher web UI.
 
 ```
@@ -392,7 +392,13 @@ rancherd reset-admin
 ```
 
 - This command will spit out the web UI address (you'll need this to login in a moment), and the username and password. __Take note of the URL IP, and username, and copy the password.__
+
+> Note: If you the __FATA[0000] cluster and rancher are not ready. Please try later.: the server could not find the requested resource__ message, then you need to give Rancher more time to finish set up.
+
 - __Enter the IP Rancher__ provided in your web browser, then __enter that username and paste that password__ to access the Rancher UI.
+
+![rancher_login](https://i.imgur.com/ei73SSD.png)
+
 - Next, you need to __input a new password__ (save this for future use).
 - __Select the multi-cluster view__ that says something like: "I want to create or manage multiple clusters."
 - Once you gained access to the UI, we want to add our existing `k3s` cluster to Rancher. Click on the __Add Cluster__ (button on the top right) > __Other Cluster__ > __Input a Name__ > __Copy the command line starting with `curl`__.
