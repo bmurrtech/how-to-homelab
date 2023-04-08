@@ -368,7 +368,103 @@ ansible --version
 
 # Kubernetes
 Kubernetes is a Greek word κυβερνήτης, meaning “helmsman” or “pilot”. As the name entails, it is a powerful, serverless orchestration tool for managing multiple nodes in a cluster to provide high-availability, scalable web application services. In this use-case, we are rock'n [K3s](https://docs.k3s.io/). Sound amazing? Why not add it to your homelab? Let's go!
-- Start by creating five new VMs and naming them. See my cloud init template guide for a super-fast way to create new lightweight VMs.
+
+#### Create a K3S Cluster
+- Start by __creating five new VMs__ and naming them. See my [cloud init template guide](#cloud-init-template) for a super-fast way to create new lightweight VMs.
+- Next, use terminal or PuTTY to __access the newly created VM__ that you wish to make your __master node__.
+- Once you're in the master node, __grant your user root priviledges__
+
+```
+sudo su -
+```
+
+- To install K3S paste the following command:
+
+```
+curl -sfl https://get.k3s.io | K3S_KUBECONFIG_MODE="644" sh -s
+```
+
+- __Give the command a minute to run__ and find and download the K3S installation script (it shouldn't take more than a minute). If successful, you should read a message stating, "__Starting k3s__"
+- To test that `k3s` is functional and to check your current node setup, enter the following command:
+
+```
+kubectl get nodes
+```
+
+- Since we have not yet added additional nodes, __you should only see one master node listed__. That's okay, but let's change that by adding new nodes!
+- Remember those other VMs you created, it's time to __add them using the `token` from the master node__.
+
+```
+cat /var/lib/rancher/k3s/server/node-token
+```
+
+- __Copy the `node token`__ you see (you'll need it when you install `k3s` on the other VMs.
+- __SSH__ to the second VM you created to be a __worker node__, and __grant yourself `sudo` root authorization__ as before: `sudo su -`.
+- Next, enter the command below to __add this VM as a worker node__.
+
+```
+curl -sfl https://get.k3s.io | K3S_TOKEN="[YOURTOKEN]" K3S_URL="https://[YOUR_MASTER_NODE_IP]:6443" K3S_NODE_NAME="[YOUR_WORKER_NAME]" sh -
+```
+
+> Check if it worked by running `kubectl get nodes` on the master node. If you see a new node added, then you did it right. Congrats!
+
+- If all went well creating your first worker node, __repeat the steps above__ until all nodes are added to your `k3s` cluster. As a recap, SSH to the VM, grant `sudo` auth, paste the `curl` command, update the worker name, and check if it was added.
+
+#### Use Rancher to Manage K3S Cluster
+Think of Rancher like, well, a rancher herding cattle or a queen bee controlling her worker drone bees. Rancher is a powerful, visual orchestration tool for K3S, and you will want it! Here's how to get it:
+- First, start off by __creating another VM__ to run your Rancher controller (_1CPU and 2-4GB of RAM is sufficient_).
+- Next, SSH into the VM and __create a new directory, `cd` to it, and create a blank file__ as follows:
+
+```
+mkdir /etc/rancher/rke2
+cd /etc/rancher/rke2
+nano config.yaml
+```
+
+- Once you are in the `config.yaml` file, __add the following contents__:
+
+```
+token: [passphrase]
+tls-sanL
+  - [IP_of_Rancher_VM]
+```
+
+- Once you have saved those conents to the `config.yaml`, __it's time to install Rancher__:
+
+```
+curl -sfl https://get.rancher.io | sh -
+```
+
+- __Test if Rancher installed via `rancherd --help`__. If you get a `Rancher Kubernetes Engine` as a return, it is working.
+- __Set Rancher to enabled and run continuously__ in the background via:
+
+```
+systemctl enable rancherd-server.service
+systemctl start rancherd-server.service
+
+# provides output of processes and logs
+journalctl -eu rancherd-server -f
+```
+
+> Note: The Rancher installation automatically creates a second K3S cluster that will run alongside the K3S cluster we just created after we add it to the Rancher cluster.
+
+- __Once the logs inidicate that the processes are completely finished hit `CTRL + C`__ to stop the log updates.
+- Assuming that Rancher is completely installed, up, and running, it's now time to __reset the default password__ for the Rancher web UI.
+
+```
+rancherd reset-admin
+```
+
+- This command will spit out the web UI address (you'll need this to login in a moment), and the username and password. __Take note of the URL IP, and username, and copy the password.__
+- __Enter the IP Rancher__ provided in your web browser, then __enter that username and paste that password__ to access the Rancher UI.
+- Next, you need to __input a new password__ (save this for future use).
+- __Select the multi-cluster view__ that says something like: "I want to create or manage multiple clusters."
+- Once you gained access to the UI, we want to add our existing `k3s` cluster to Rancher. Click on the __Add Cluster__ (button on the top right) > __Other Cluster__ > __Input a Name__ > __Copy the command line starting with `curl`__.
+- SSH back into your __master node__ and __paste that command__ and `ENTER`. This will make this cluster join the Rancher UI.
+
+> Note: If you are running your `k3s` cluster on the __ARM architechure__ you need to edit the API: Click on the three dots of the newly added cluster > View in API > Edit > Paste `rancher/rancher-agent:v2.5.8-linux-arm64` into the _agentImageOverride_ field > Show Request (button at bottom) > Send Request (button at bottom) > Exit. You should now see the state/status change to "Active."
+
+#### Techno Tim's K8S + Ansible Installer Guide (WIP)
 - Once the VMs are created, use the Proxmox console (button), login, and __take note of each server IP address__. You will need this later! 
 - Remote back into you __Ansible server__ and `cd` to your user directory `cd /home/<user>`.
 - Create a subfolder for Techno Tim's Ansible playbook; something like: `mkdir ttansible` will do, then `cd` into that folder.
