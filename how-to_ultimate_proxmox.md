@@ -348,8 +348,12 @@ Think of Rancher like, well, a rancher herding cattle or a queen bee controlling
 - Next, SSH into the VM and __create a new directory, `cd` to it, and create a blank file__ as follows:
 
 ```
-mkdir /etc/rancher/rke2
-cd /etc/rancher/rke2
+sudo su -
+cd /ect
+sudo mkdir rancher
+cd rancher
+sudo mkdir rke2
+cd rke2
 nano config.yaml
 ```
 
@@ -357,7 +361,7 @@ nano config.yaml
 
 ```
 token: [passphrase]
-tls-sanL
+tls-san:
   - [IP_of_Rancher_VM]
 ```
 
