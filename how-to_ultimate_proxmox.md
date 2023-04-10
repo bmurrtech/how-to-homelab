@@ -310,6 +310,12 @@ Kubernetes is a Greek word κυβερνήτης, meaning “helmsman” or “pi
 sudo su -
 ```
 
+- As a prerequisite, `k3s` needs to have `iptables` to integrate with Rancher. Enter the following to install `iptables`:
+
+```
+sudo apt-get install iptables
+```
+
 - To install K3S paste the following command:
 
 ```
