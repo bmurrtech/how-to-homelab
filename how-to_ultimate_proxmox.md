@@ -611,8 +611,10 @@ nano /etc/default/grub
 - Edit the line that contains GRUB_CMDLINE_LINUX_DEFAULT="quiet" to:
 
 ```
-GRUB_CMDLINE_LINUX_DEFAULT="quiet intel_iommu=on"
+GRUB_CMDLINE_LINUX_DEFAULT="quiet intel_iommu=on iommu=pt pcie_acs_override=downstream,multifunction nofb nomodeset video=vesafb:off,efifb:off"
 ```
+
+> These extra commands allow for the passthrough to work
 
 > Note: Edit the paramerters to your specs (i.e. change "intel" to "amd" if you are using different CPU). Ex. `GRUB_CMDLINE_LINUX_DEFAULT="quiet amd_iommu=on"`
 
@@ -635,7 +637,7 @@ vfio_virqfd
 ```
 
 - Save and exit.
-- Edit the IOMMU interrup remappings using the following cmdlets:
+- Remap/override the IOMMU mappings by creating these files using the following cmdlets:
 
 ```
 # first command
@@ -651,9 +653,12 @@ echo "options kvm ignore_msrs=1" > /etc/modprobe.d/kvm.conf
 echo "blacklist radeon" >> /etc/modprobe.d/blacklist.conf
 echo "blacklist nouveau" >> /etc/modprobe.d/blacklist.conf
 echo "blacklist nvidia" >> /etc/modprobe.d/blacklist.conf
+echo "blacklist nvidiafb" >> /etc/modprobe.d/blacklist.conf
 ```
 
-- Now, we can add the PCIE to the VFIO
+> Progress Note: At this point, the host system is configured to passthrough a PCI card to any VM, but the VFIO does not know what PCI lane _specifically_ to passthrough. 
+
+- Now, let's add the PCIE cards we want the VFIO to passthrough to the VMs:
 
 ```
 lspci -v
@@ -705,17 +710,24 @@ lspci -n -s 83:00.1
 Now we add the GPU vendor ID's to the VFIO, and __remember to replace the id's with your own!__:
 
 ```
-echo "options vfio-pci ids=10de:228b,10de:2484 disable_vga=1"> /etc/modprobe.d/vfio.conf
+echo "options vfio-pci ids=10de:228b,10de:2484,8086:1d02 disable_vga=1"> /etc/modprobe.d/vfio.conf
 ```
 
-- Next, run this command:
+> This new config file we just created is telling VFIO what PCIE cards to passthrough to the VMs. So, if you ever add new PCI cards, then you want to add the vendor IDs to this `/etc/modprobe.d/vfio.conf` file.
+
+
+- Next, run this command to update the VFIO file:
 
 ```
 update-initramfs -u
 ```
 
-- Then, restart your Proxmox server.
-- Now, on the VM side and settings, we want to __enable OMVF (UEFI)__. Under the ...
+- __Wait__ for the terminal to run through the __update until finish__, then, __restart your Proxmox server__.
+- Now, on the VM side and settings, we want to __enable OMVF (UEFI)__. See screenshot below:
+
+![UEFI_edit](https://i.imgur.com/3QFhPe5.png)
+
+- Back in the Hardware settings of the VM, we want to __add a new PCI device__ as follows: __Add (button) > PCI Device > Device (dropdown) > Select the PCI device you want to add (i.e. SATA controller, GPU, etc.)
 - Next, edit the VM's config file as follows:
 
 ```
