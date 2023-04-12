@@ -588,3 +588,146 @@ cp -R inventory/sample inventory/my-cluster
 ![k3s_embedded_database](https://i.imgur.com/CrErJsy.png)
 This [diagram](https://docs.k3s.io/architecture) shows an example of a cluster that has a single-node K3s server with an embedded SQLite database.
 
+# PCIE GPU Passthrough
+
+[Mannually Mount SATA Drives w/o HBA/SATA Controller](https://www.youtube.com/watch?v=2mvCaqra6qY)
+
+[How to Passthrough a Disk to VM](https://www.youtube.com/watch?v=U-UTMuhmC1U)
+
+```
+# ls -n /dev/disk/by-id/
+# /sbin/qm set [VM-ID] -virtio2 /dev/disk/by-id/[DISK-ID]
+```
+
+> Right-click Hard Disk > Disable Backup (check box)
+
+[How to Passthrough a PCIE to ProxMox](https://www.reddit.com/r/homelab/comments/b5xpua/the_ultimate_beginners_guide_to_gpu_passthrough/)
+
+```
+nano /etc/default/grub
+```
+
+- Edit the line that contains GRUB_CMDLINE_LINUX_DEFAULT="quiet" to:
+
+```
+GRUB_CMDLINE_LINUX_DEFAULT="quiet intel_iommu=on"
+```
+
+> Note: Edit the paramerters to your specs (i.e. change "intel" to "amd" if you are using different CPU). Ex. `GRUB_CMDLINE_LINUX_DEFAULT="quiet amd_iommu=on"`
+
+- Now, update `grub` with the changes we just made to the `grub` file.
+
+```
+update-grub
+```
+
+- Now, edit the `modules` files as follows:
+
+```
+nano /etc/modules
+# add the following  lines at the bottom of the file
+
+vfio
+vfio_iommu_type1
+vfio_pci
+vfio_virqfd
+```
+
+- Save and exit.
+- Edit the IOMMU interrup remappings using the following cmdlets:
+
+```
+# first command
+echo "options vfio_iommu_type1 allow_unsafe_interrupts=1" > /etc/modprobe.d/iommu_unsafe_interrupts.conf
+
+# second command
+echo "options kvm ignore_msrs=1" > /etc/modprobe.d/kvm.conf
+```
+
+- As we do not want the Proxmox host system using GPU resources, we need to blacklist the drivers by running these commands:
+
+```
+echo "blacklist radeon" >> /etc/modprobe.d/blacklist.conf
+echo "blacklist nouveau" >> /etc/modprobe.d/blacklist.conf
+echo "blacklist nvidia" >> /etc/modprobe.d/blacklist.conf
+```
+
+- Now, we can add the PCIE to the VFIO
+
+```
+lspci -v
+```
+
+> Note: The shell will output a jargon of text. Look for specific lines that list the card you want to add to the VFIO. See screenshot for example:
+
+![sata_controler](https://i.imgur.com/0TAW6ms.png)
+
+![GPU](https://i.imgur.com/gGYMhbY.png)
+
+> ```
+> 01:00.0 VGA compatible controller: NVIDIA Corporation GP104 [GeForce GTX 1070] (rev a1) (prog-if 00 [VGA controller])
+> 
+> 01:00.1 Audio device: NVIDIA Corporation GP104 High Definition Audio Controller (rev a1)
+> 
+> Make note of the first set of numbers (e.g. 01:00.0 and 01:00.1). We'll need them > for the next step.
+> ```
+
+- Run the command below. Replace __01:00__ with whatever number was next to your GPU when you ran the previous command:
+
+```
+# my SATA controller
+lspci -n -s 00:1f.2
+
+# my GPU VGA
+lspci -n -s 83:00.0
+
+# my GPU Audio
+lspci -n -s 83:00.1
+
+```
+
+- Doing this should output your card's vendor IDs, usually one ID for the GPU and one ID for the Audio bus. It'll look a little something like this:
+
+```
+# my SATA controller
+00:1f.2 0106: 8086:1d02 (rev 06)
+
+# my GPU VGA
+83:00.0 10de:2484 (rev a1)
+
+# my GPU audio "GA104 High Definition Audio Controller)
+83:00.1 0403: 10de:228b (rev a1)
+```
+
+- Take special note of these vendor ID codes: `10de:228b` and `10de:2484`.
+
+Now we add the GPU vendor ID's to the VFIO, and __remember to replace the id's with your own!__:
+
+```
+echo "options vfio-pci ids=10de:228b,10de:2484 disable_vga=1"> /etc/modprobe.d/vfio.conf
+```
+
+- Next, run this command:
+
+```
+update-initramfs -u
+```
+
+- Then, restart your Proxmox server.
+- Now, on the VM side and settings, we want to __enable OMVF (UEFI)__. Under the ...
+- Next, edit the VM's config file as follows:
+
+```
+nano /etc/pve/qemu-server/<vmid>.con
+
+# add these lines to the file at the end
+machine: q35
+cpu: host,hidden=1,flags=+pcid
+args: -cpu 'host,+kvm_pv_unhalt,+kvm_pv_eoi,hv_vendor_id=NV43FIX,kvm=off'
+```
+
+> Where `<vmid>` is the VM ID Number you used during the VM creation (General Tab).
+
+- Now, we can __add the PCI device__ to the VM via __Hardware > Add (button) > PCI Device (dropdown menu) > Look for your PCI device and add it.
+
+> Note to __NVIDIA Users__: If you're still experiencing issues, or the ROM file is causing issues on its own, you might need to patch the ROM file (particularly for NVIDIA cards). There's a great tool for patching GTX 10XX series cards here: https://github.com/sk1080/nvidia-kvm-patcher and here https://github.com/Matoking/NVIDIA-vBIOS-VFIO-Patcher. It only works for 10XX series though. If you have something older, you'll have to patch the ROM file manually using a hex editor, which is beyond the scope of this tutorial guide.
