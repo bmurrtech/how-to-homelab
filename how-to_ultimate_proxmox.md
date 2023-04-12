@@ -15,6 +15,7 @@ This guide will show you how create the __ultimate__ Proxmox hypervisor with:
 - [Ansible Automation Setup](#ansible)
 - [Create a Kubernetes Cluster](#kubernetes)
 - [Use Rancher to Manage K3S Cluster](#rancher)
+- [Setup GPU / PCIE Card Passthrough](#pcie-gpu-passthrough)
 
 # ProxMox Install 
 - Download the latest "ProxMox ISO [version#] ISO installer" from the [official website](https://www.proxmox.com/en/downloads/category/iso-images-pve)
