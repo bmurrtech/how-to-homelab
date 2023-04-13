@@ -795,7 +795,7 @@ args: -cpu 'host,+kvm_pv_unhalt,+kvm_pv_eoi,hv_vendor_id=NV43FIX,kvm=off'
 - Back in the Hardware settings of the VM, we want to __add a new PCI device__ as follows: __Add (button) > PCI Device > Device (dropdown) > Select the PCI device you want to add (i.e. SATA controller, GPU, etc.)__
 - __Check all the boxes__: `All functions`, `ROM Bar`, `Primary GPU`, `PCI-Express`.
 
-> No IMMOU Error: If you get this error message, you need to ensure that 1) your CPU supports UEFI/IOMMU and 2) that you enable `VT-d`, `ACS`, `ARI`, `virtualization` on your mother board `BIOS`. __Look under UEFI__ settings and __enable UEFI__ wherever available.
+> __No IMMOU Error__: You may get the following error if your CPU does not support IMMOU / Passthrough: _"TASK ERROR: cannot prepare PCI pass-through, IOMMU not present."_ If you get this error message, you need to ensure that __1)__ your CPU supports IOMMU/Passthrough and __2)__ that you enable `VT-d`, `ACS`, `ARI`, `virtualization` on your mother board `BIOS`. __Look under UEFI__ settings and __enable UEFI__ wherever available.  If you try to start the VM and IMMOU is not supported or configured/enabled at the BIOS level, you will also get an error.
 > ![enable__bios_IMMOU](https://i.imgur.com/D9Jp4Xj.png)
 
 - __SSH to your VM__ and __run the following command to check__ if the GPU / PCI is listed:
@@ -847,7 +847,7 @@ sudo nano /etc/fstab
 - Now, we must __create that `PlexMedia` directory__ (same path as set inside the `fstab` config):
 
 ```
-sudo mkdri /PlexMedia
+sudo mkdir /PlexMedia
 ```
 
 > To test, reboot your VM, and enter the following:
@@ -860,5 +860,5 @@ sudo mkdri /PlexMedia
 - Now that we have mounted the media file server to our Plex VM, we need to __add this directory in the Plex web UI__ via __Manage > Libraries > Add Library (button) > Select the type of media you want to add (i.e. Movies, TV Shows, etc.) > Next (button) > Browse for the /PlexMedia/ folder by clicking on `/` and scroll down to the `PlexMedia` folder > Add (button) > Add Library (button).__ You should now see some media added to Plex.
 - To upscale the streaming quality, __navigate to the Plex dashboard under > Plex Web > Quality > Video Quality > Uncheck "Use recommended settings > Set the bitrate you want (i.e. 10Mbps, 1080o) > Save Changes (button)__.
 - From the Plex menu, __navigate to Transcoder > Check "Use hardware-accelerated video encoding" > Check "Use hardware accelration when available > Save Changes__
-- Pass the GPU through to that VM (don't forget to grab the VM IP before). Done.
+- __Pass the GPU through to that VM__ (don't forget to grab the VM IP before or use Advance IP Scanner to find it). Done.
 
