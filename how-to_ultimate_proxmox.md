@@ -593,15 +593,17 @@ This [diagram](https://docs.k3s.io/architecture) shows an example of a cluster t
 
 [Mannually Mount SATA Drives w/o HBA/SATA Controller](https://www.youtube.com/watch?v=2mvCaqra6qY)
 
-[How to Passthrough a Disk to VM](https://www.youtube.com/watch?v=U-UTMuhmC1U)
+[How to Passthrough a Disk to VM- YouTube](https://www.youtube.com/watch?v=U-UTMuhmC1U)
+[How to Passthrough a Disk to VM- Proxmox Docs](https://pve.proxmox.com/wiki/Passthrough_Physical_Disk_to_Virtual_Machine_(VM))
 
 ```
-# ls -n /dev/disk/by-id/
-# /sbin/qm set [VM-ID] -virtio2 /dev/disk/by-id/[DISK-ID]
+ls -n /dev/disk/by-id/
+/sbin/qm set [VM-ID] -virtio2 /dev/disk/by-id/[DISK-ID]
 ```
 
 > Right-click Hard Disk > Disable Backup (check box)
 
+#### Passthrough PCI to Proxmox
 [How to Passthrough a PCIE to ProxMox](https://www.reddit.com/r/homelab/comments/b5xpua/the_ultimate_beginners_guide_to_gpu_passthrough/)
 
 ```
@@ -755,6 +757,11 @@ args: -cpu 'host,+kvm_pv_unhalt,+kvm_pv_eoi,hv_vendor_id=NV43FIX,kvm=off'
 
 - Back in the Hardware settings of the VM, we want to __add a new PCI device__ as follows: __Add (button) > PCI Device > Device (dropdown) > Select the PCI device you want to add (i.e. SATA controller, GPU, etc.)
 - __Check all the boxes__: `All functions`, `ROM Bar`, `Primary GPU`, `PCI-Express`.
+
+> No IMMOU Error: If you get this error message, you need to ensure that 1) your CPU supports UEFI/IOMMU and 2) that you enable `VT-d`, `ACS`, `ARI`, `virtualization` on your mother board `BIOS`. Look under UEFI settings.
+> ![enable__bios_IMMOU](https://i.imgur.com/D9Jp4Xj.png)
+
+
 - __SSH to your VM__ and __run the following command to check__ if the GPU / PCI is listed:
 
 ```
