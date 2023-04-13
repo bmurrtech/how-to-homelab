@@ -612,6 +612,18 @@ nano /etc/default/grub
 
 ```
 GRUB_CMDLINE_LINUX_DEFAULT="quiet intel_iommu=on iommu=pt pcie_acs_override=downstream,multifunction nofb nomodeset video=vesafb:off,efifb:off"
+
+# Disable OS-Prober
+GRUB_DISABLE_OS_PROBER=true
+```
+
+- I have also seen this GRUB config work:
+
+```
+GRUB_CMDLINE_LINUX_DEFAULT="quiet intel_iommu=on iommu=pt pcie_acs_override=downstream,multifunction video=efifb:eek:ff"
+
+# Disable OS-Prober
+GRUB_DISABLE_OS_PROBER=true
 ```
 
 > These extra commands allow for the passthrough to work
@@ -666,9 +678,7 @@ lspci -v
 
 > Note: The shell will output a jargon of text. Look for specific lines that list the card you want to add to the VFIO. See screenshot for example:
 
-![sata_controler](https://i.imgur.com/0TAW6ms.png)
-
-![GPU](https://i.imgur.com/gGYMhbY.png)
+![GPU](https://i.imgur.com/b3PgnLC.png)
 
 > ```
 > 01:00.0 VGA compatible controller: NVIDIA Corporation GP104 [GeForce GTX 1070] (rev a1) (prog-if 00 [VGA controller])
@@ -723,24 +733,90 @@ update-initramfs -u
 ```
 
 - __Wait__ for the terminal to run through the __update until finish__, then, __restart your Proxmox server__.
+
+> BEWARE: Get the IP address of the VM __before__ you enable the GPU passthrough because the console on the VM will be inaccessible via Proxmox and you must use RDP or SSH to access the terminal on the VM.
+
 - Now, on the VM side and settings, we want to __enable OMVF (UEFI)__. See screenshot below:
 
 ![UEFI_edit](https://i.imgur.com/3QFhPe5.png)
 
-- Back in the Hardware settings of the VM, we want to __add a new PCI device__ as follows: __Add (button) > PCI Device > Device (dropdown) > Select the PCI device you want to add (i.e. SATA controller, GPU, etc.)
 - Next, edit the VM's config file as follows:
 
 ```
-nano /etc/pve/qemu-server/<vmid>.con
+nano /etc/pve/qemu-server/<vmid>.conf
 
-# add these lines to the file at the end
-machine: q35
+# modify each line as you see
 cpu: host,hidden=1,flags=+pcid
+machine: q35
 args: -cpu 'host,+kvm_pv_unhalt,+kvm_pv_eoi,hv_vendor_id=NV43FIX,kvm=off'
 ```
 
 > Where `<vmid>` is the VM ID Number you used during the VM creation (General Tab).
 
-- Now, we can __add the PCI device__ to the VM via __Hardware > Add (button) > PCI Device (dropdown menu) > Look for your PCI device and add it.
+- Back in the Hardware settings of the VM, we want to __add a new PCI device__ as follows: __Add (button) > PCI Device > Device (dropdown) > Select the PCI device you want to add (i.e. SATA controller, GPU, etc.)
+- __Check all the boxes__: `All functions`, `ROM Bar`, `Primary GPU`, `PCI-Express`.
+- __SSH to your VM__ and __run the following command to check__ if the GPU / PCI is listed:
+
+```
+lspci
+```
 
 > Note to __NVIDIA Users__: If you're still experiencing issues, or the ROM file is causing issues on its own, you might need to patch the ROM file (particularly for NVIDIA cards). There's a great tool for patching GTX 10XX series cards here: https://github.com/sk1080/nvidia-kvm-patcher and here https://github.com/Matoking/NVIDIA-vBIOS-VFIO-Patcher. It only works for 10XX series though. If you have something older, you'll have to patch the ROM file manually using a hex editor, which is beyond the scope of this tutorial guide.
+
+- If you are passing a GPU or any othe PCI that needs drivers, __download the necessary drivers directly to the VM__.
+
+> Important for __Linux Users__: You can run a `wget` followed by the official driver download link via terminal.
+> Example: `wget https://international.download.nvidia.com/long-name-driver-number-specific-to-your-card.run`
+> Also, you will need to install some dependancies on Linux in order to get the NVIDIA driver to compile itself. Run the following to install those dependencies: `sudo apt install build-essential libglvnd-dev pkg-config -y`
+> And then, run the NVIDA installer we previously downloaded via `wget` by running the following command: `sudo ./NVIDIA-Linux [TAB out the rest] + ENTER`.
+> Run `lspci -v` and you should now see the `Kernal driver in use: nvidia` now updated in the list.
+> 
+> ![nvidia_linux_driver](https://i.imgur.com/DVtGyeT.png)
+> On your Linux VM with the GPU passthrough, test the NVIDIA driver using `nvidia-smi`. If you get an "Unknown Error" then you must edit the `/etc/pve/qemu-server/<vmid>.conf` and ensure that that the following is reflected `cpu: host,hidden=1,flags=+pcid`. This will ensure that the host machine cannot detect that it is a virtual machine, thus permitting the NVIDIA driver to run.
+
+# Plex Media Server
+
+- Assuming you have successfully pass a GPU through to your VMs, you can now take advantage of GPU-accelerated transcoding
+
+> Note: You must have the Plex server claimed and a lifetime or Plex pass subscription to use GPU-accelerated encoding.
+
+#### Installing a Plex Media Server
+- Start by __creating a VM__ that will be your dedicated Plex server.
+- __[Visit the repository](https://support.plex.tv/articles/235974187-enable-repository-updating-for-supported-linux-server-distributions/)__ for Plex and __copy and paste the DEB-based distros__ into the terminal of your new Plex VM to enable the Plex Media Server repo on the Ubuntu instance.
+
+```
+echo deb https://downloads.plex.tv/repo/deb public main | sudo tee /etc/apt/sources.list.d/plexmediaserver.list
+curl https://downloads.plex.tv/plex-keys/PlexSign.key | sudo apt-key add -
+sudo apt install plexmediaserver -y
+sudo apt-get update
+sudo apt upgrade
+```
+
+- If Plex installed successfully, __you should be able to access the Plex web UI__ now from the browser.
+- Next, will want to enalbe instant connection to any network shares where the actual media files are stored on server boot. __Within the Plex server terminal, type:__
+
+```
+sudo nano /etc/fstab
+
+# at the end of the file enter the path to the network file share IP address (i.e. TrueNas, Synology)
+//192.168.1.200/PlexTest /PlexMedia cifs username=plextest,password=12345 0 0
+```
+
+- Now, we must __create that `PlexMedia` directory__ (same path as set inside the `fstab` config):
+
+```
+sudo mkdri /PlexMedia
+```
+
+> To test, reboot your VM, and enter the following:
+> ```
+> cd /PlexMedia/
+> ls
+> ```
+> If you get a return of folders/files, the `fstab` configuration was a success!
+
+- Now that we have mounted the media file server to our Plex VM, we need to __add this directory in the Plex web UI__ via __Manage > Libraries > Add Library (button) > Select the type of media you want to add (i.e. Movies, TV Shows, etc.) > Next (button) > Browse for the /PlexMedia/ folder by clicking on `/` and scroll down to the `PlexMedia` folder > Add (button) > Add Library (button).__ You should now see some media added to Plex.
+- To upscale the streaming quality, __navigate to the Plex dashboard under > Plex Web > Quality > Video Quality > Uncheck "Use recommended settings > Set the bitrate you want (i.e. 10Mbps, 1080o) > Save Changes (button)__.
+- From the Plex menu, __navigate to Transcoder > Check "Use hardware-accelerated video encoding" > Check "Use hardware accelration when available > Save Changes__
+- Pass the GPU through to that VM (don't forget to grab the VM IP before). Done.
+
