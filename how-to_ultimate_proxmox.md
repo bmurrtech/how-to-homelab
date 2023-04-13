@@ -578,13 +578,19 @@ ansible-playbook ./site.yml -i ./inventory/my-cluster/hosts.ini
 __[WIP]__
 
 - Change the `<proxmox_name>` to your liking.
+
+
 ```
 ansible-<proxmox_name> install -r ./collections/requirements.yml
 ```
+
 - Now, you'll need to `cd` into the repo you cloned and `cp` the `sample` directory within the `inventory` directory.
+
+
 ```
 cp -R inventory/sample inventory/my-cluster
 ```
+
 - Once copied, you must edit the `inventory/my-cluster/hosts.ini` to match your network environment. This file supports DNS also. So, if you are using Pi-hole and Unbound, add the DNS address in this file.
 ![k3s_embedded_database](https://i.imgur.com/CrErJsy.png)
 This [diagram](https://docs.k3s.io/architecture) shows an example of a cluster that has a single-node K3s server with an embedded SQLite database.
@@ -604,7 +610,9 @@ ls -n /dev/disk/by-id/
 > Right-click Hard Disk > Disable Backup (check box)
 
 #### Passthrough PCI to Proxmox
-[How to Passthrough a PCIE to ProxMox](https://www.reddit.com/r/homelab/comments/b5xpua/the_ultimate_beginners_guide_to_gpu_passthrough/)
+[How to Passthrough a PCIE to ProxMox - Reddit Source](https://www.reddit.com/r/homelab/comments/b5xpua/the_ultimate_beginners_guide_to_gpu_passthrough/)
+
+[How to Passthrough a PCIE to ProxMox - Proxmox Docs](https://pve.proxmox.com/pve-docs/chapter-qm.html#qm_pci_passthrough)
 
 ```
 nano /etc/default/grub
@@ -632,6 +640,12 @@ GRUB_DISABLE_OS_PROBER=true
 
 > Note: Edit the paramerters to your specs (i.e. change "intel" to "amd" if you are using different CPU). Ex. `GRUB_CMDLINE_LINUX_DEFAULT="quiet amd_iommu=on"`
 
+- For Intel CPUs, add `intel_iommu=on` to the kernel command line also (for AMD CPUs it should be enabled automatically):
+
+```
+echo "intel_iommu=on" >> /etc/kernel/cmdline
+```
+
 - Now, update `grub` with the changes we just made to the `grub` file.
 
 ```
@@ -650,8 +664,25 @@ vfio_pci
 vfio_virqfd
 ```
 
-- Save and exit.
-- Remap/override the IOMMU mappings by creating these files using the following cmdlets:
+- __Save__ and exit.
+- You need to refresh your `initramfs` after editign the modules using:
+
+```
+update-initramfs -u -k all
+```
+
+- After letting that command to run, __reboot the Proxmox server__ and then __test if IMMOU is enabled:__
+
+```
+# for Intel
+dmesg | grep -e DMAR -e IOMMU -e Intel-Vi
+
+# for AMD
+dmesg | grep -e DMAR -e IOMMU -e AMD-Vi
+```
+
+- You should __see a reply__ something to the effect of `DMAR: IOMMU enabled`.
+- Now, we must __remap/override the IOMMU mappings__ by creating these files using the following cmdlets:
 
 ```
 # first command
@@ -675,7 +706,7 @@ echo "blacklist nvidiafb" >> /etc/modprobe.d/blacklist.conf
 - Now, let's add the PCIE cards we want the VFIO to passthrough to the VMs:
 
 ```
-lspci -v
+lspci -nn
 ```
 
 > Note: The shell will output a jargon of text. Look for specific lines that list the card you want to add to the VFIO. See screenshot for example:
@@ -704,7 +735,7 @@ lspci -n -s 83:00.1
 
 ```
 
-- Doing this should output your card's vendor IDs, usually one ID for the GPU and one ID for the Audio bus. It'll look a little something like this:
+- Doing this should output your card's vendor IDs, usually one ID for the GPU and one ID for the Audio bus. See below for example:
 
 ```
 # my SATA controller
@@ -722,45 +753,50 @@ lspci -n -s 83:00.1
 Now we add the GPU vendor ID's to the VFIO, and __remember to replace the id's with your own!__:
 
 ```
-echo "options vfio-pci ids=10de:228b,10de:2484,8086:1d02 disable_vga=1"> /etc/modprobe.d/vfio.conf
+echo "options vfio-pci ids=10de:228b,10de:2484 disable_vga=1"> /etc/modprobe.d/vfio.conf
 ```
 
-> This new config file we just created is telling VFIO what PCIE cards to passthrough to the VMs. So, if you ever add new PCI cards, then you want to add the vendor IDs to this `/etc/modprobe.d/vfio.conf` file.
-
+> This new config file we just created is telling VFIO what PCIE cards to passthrough to the VMs. So, if you ever add new PCI cards, then you want to add the vendor IDs to this `/etc/modprobe.d/vfio.conf` file. However, it is important that the device(s) you want to pass through are in a __separate__ IOMMU group. This can be checked with: `find /sys/kernel/iommu_groups/ -type l`
 
 - Next, run this command to update the VFIO file:
 
 ```
-update-initramfs -u
+update-initramfs -u -k all
 ```
 
-- __Wait__ for the terminal to run through the __update until finish__, then, __restart your Proxmox server__.
+- __Wait__ for the terminal to run through the __update until finish__, then, __reboot the Proxmox server again__.
+- After the reboot, __check if your changes were successful__:
 
-> BEWARE: Get the IP address of the VM __before__ you enable the GPU passthrough because the console on the VM will be inaccessible via Proxmox and you must use RDP or SSH to access the terminal on the VM.
+```
+lspci -nnk
+```
+
+- If the line __reads, `Kernel driver in use: vfio-pci`__ _or_ the __`in use` line is missing entirely__, __then the device is ready__ to be used for passthrough.
 
 - Now, on the VM side and settings, we want to __enable OMVF (UEFI)__. See screenshot below:
 
 ![UEFI_edit](https://i.imgur.com/3QFhPe5.png)
 
-- Next, edit the VM's config file as follows:
+- Next, __edit the VM's config file from the Proxmox host node__  as follows:
 
 ```
 nano /etc/pve/qemu-server/<vmid>.conf
 
-# modify each line as you see
+# modify each line as you see or add these lines if you do not see the lines
 cpu: host,hidden=1,flags=+pcid
 machine: q35
 args: -cpu 'host,+kvm_pv_unhalt,+kvm_pv_eoi,hv_vendor_id=NV43FIX,kvm=off'
 ```
 
 > Where `<vmid>` is the VM ID Number you used during the VM creation (General Tab).
+ 
+ > __BEWARE__: Before you move on to the next step, get the IP address of the VM __before__ you enable the GPU passthrough because the console on the VM will be inaccessible via Proxmox and you must use RDP or SSH to access the terminal on the VM.
 
-- Back in the Hardware settings of the VM, we want to __add a new PCI device__ as follows: __Add (button) > PCI Device > Device (dropdown) > Select the PCI device you want to add (i.e. SATA controller, GPU, etc.)
+- Back in the Hardware settings of the VM, we want to __add a new PCI device__ as follows: __Add (button) > PCI Device > Device (dropdown) > Select the PCI device you want to add (i.e. SATA controller, GPU, etc.)__
 - __Check all the boxes__: `All functions`, `ROM Bar`, `Primary GPU`, `PCI-Express`.
 
-> No IMMOU Error: If you get this error message, you need to ensure that 1) your CPU supports UEFI/IOMMU and 2) that you enable `VT-d`, `ACS`, `ARI`, `virtualization` on your mother board `BIOS`. Look under UEFI settings.
+> No IMMOU Error: If you get this error message, you need to ensure that 1) your CPU supports UEFI/IOMMU and 2) that you enable `VT-d`, `ACS`, `ARI`, `virtualization` on your mother board `BIOS`. __Look under UEFI__ settings and __enable UEFI__ wherever available.
 > ![enable__bios_IMMOU](https://i.imgur.com/D9Jp4Xj.png)
-
 
 - __SSH to your VM__ and __run the following command to check__ if the GPU / PCI is listed:
 
@@ -804,7 +840,6 @@ sudo apt upgrade
 
 ```
 sudo nano /etc/fstab
-
 # at the end of the file enter the path to the network file share IP address (i.e. TrueNas, Synology)
 //192.168.1.200/PlexTest /PlexMedia cifs username=plextest,password=12345 0 0
 ```
