@@ -15,7 +15,7 @@ This guide will show you how create the __ultimate__ Proxmox hypervisor with:
 - [Ansible Automation Setup](#ansible)
 - [Create a Kubernetes Cluster](#kubernetes)
 - [Use Rancher to Manage K3S Cluster](#rancher)
-- [Setup GPU / PCIE Card Passthrough](#pcie-gpu-passthrough)
+- [Setup GPU / PCI Card Passthrough](#pcie-gpu-passthrough)
 
 # ProxMox Install 
 - Download the latest "ProxMox ISO [version#] ISO installer" from the [official website](https://www.proxmox.com/en/downloads/category/iso-images-pve)
@@ -610,9 +610,9 @@ ls -n /dev/disk/by-id/
 > Right-click Hard Disk > Disable Backup (check box)
 
 #### Passthrough PCI to Proxmox
-[How to Passthrough a PCIE to ProxMox - Reddit Source](https://www.reddit.com/r/homelab/comments/b5xpua/the_ultimate_beginners_guide_to_gpu_passthrough/)
+[How to Passthrough a PCI to ProxMox - Reddit Source](https://www.reddit.com/r/homelab/comments/b5xpua/the_ultimate_beginners_guide_to_gpu_passthrough/)
 
-[How to Passthrough a PCIE to ProxMox - Proxmox Docs](https://pve.proxmox.com/pve-docs/chapter-qm.html#qm_pci_passthrough)
+[How to Passthrough a PCI to ProxMox - Proxmox Docs](https://pve.proxmox.com/pve-docs/chapter-qm.html#qm_pci_passthrough)
 
 ```
 nano /etc/default/grub
