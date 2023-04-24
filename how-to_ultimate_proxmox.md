@@ -47,7 +47,7 @@ This guide will show you how create the __ultimate__ Proxmox hypervisor with:
  - Enter `root` for the username and enter the password you created at setup to access. Done!
 - Next, you will be prompted to login to ProxMox. Input `root` for the username and enter the password you created at setup to gain access.
 
-> Before deploying and VMs, you can consolidate and expand your storage. Do this *before* creating VMs.
+> Before deploying and VMs, you can consolidate and expand your storage. Do this *before* creating VMs. See [ZFS below](#zfs-configuration).
 
 ### Change Web UI IP Address
 - If another device on the network is using the IP address that you assgined to your new Proxmox server at install, there will be a conflict and you won't be able to access the web UI.
@@ -107,6 +107,9 @@ See the [ZFS Proxmox Wiki](https://pve.proxmox.com/wiki/ZFS_on_Linux) for more d
 - Exclude the cache disk from the ZFS pool at this time (we will add it later).
 - Choose the l4x compression, and finish out the disk wizard prompts.
 - Finish the Proxmox installation, login, and open a shell to enter the following command `zpool add rpool cache [name_of_cache_drive]` and hit enter to add the cache drive to the ZFS pool created at install.
+
+> You can get the disk name by typing `fdisk -l` in the Proxmox `Shell`.
+
 - You can check the status of the pool by typing `zpool status [name_of_pool]` (the default pool name is `rpool`). Or, you can check it in the UI. Navigate to Node (pve) > Disks > ZFS. You should see the cache drive in the pool.
 
 #### Adding a Cache Drive
@@ -116,9 +119,12 @@ See the [ZFS Proxmox Wiki](https://pve.proxmox.com/wiki/ZFS_on_Linux) for more d
 #### Create ZFS Datasets
 - You can view your current ZFS pool via `zpool list` and `zfs list`. Take note of the `mountpoint` name (if you created a ZFS pool at installation, this will be called `rpool` by default).
 - To create datasets for storing `ISOs` and VM storage and more, type the following:
- - `zfs create [mountpoint_pool_name]/backups`
- - `zfs create [mountpoint_pool_name]/iso`
- - `zfs create [mountpoint_pool_name]/vm`
+ - `zfs create [mountpoint]/backups`
+ - `zfs create [mountpoint]/iso`
+ - `zfs create [mountpoint]/vm`
+
+> If `rpool` is the default, then you would type out: `zfs create rpool/backups` for example.
+
 - These dataset will share the total pool size. It dynamically allocates disk space as needed.
 - Now we need to mount/add these datasets at the `Datacenter` level:
  - Navigate to > [Datacenter (node, left-most pane) > Storage (subset) > Add > Directory](https://i.imgur.com/5QuSsWl.png) > Enter the name of the dataset (i.e. `backups`, `iso`, `vm`), and add them one at a time.
