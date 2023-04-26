@@ -12,10 +12,12 @@ This guide will show you how create the __ultimate__ Proxmox hypervisor with:
 - [Creating a ZFS Pool](#zfs-configuration)
 - [Create Cloud Init Cloud Image Template](#cloud-init-template)
 - [Access Your Lab Anywhere](#remote-access)
+- [Setup GPU / PCI Card Passthrough](#pcie-gpu-passthrough)
+- [Portainer Setup](#portainer)
+- [Plex Media Server](#plex)
 - [Ansible Automation Setup](#ansible)
 - [Create a Kubernetes Cluster](#kubernetes)
 - [Use Rancher to Manage K3S Cluster](#rancher)
-- [Setup GPU / PCI Card Passthrough](#pcie-gpu-passthrough)
 
 # ProxMox Install 
 - Download the latest "ProxMox ISO [version#] ISO installer" from the [official website](https://www.proxmox.com/en/downloads/category/iso-images-pve)
@@ -304,6 +306,294 @@ Cloudflare acts as a DDNS Reverse Proxy to allow you a domain-joined URL to secu
 
 #### TailScale
 [placeholder]
+
+# PCIE GPU Passthrough
+
+[Mannually Mount SATA Drives w/o HBA/SATA Controller](https://www.youtube.com/watch?v=2mvCaqra6qY)
+
+[How to Passthrough a Disk to VM- YouTube](https://www.youtube.com/watch?v=U-UTMuhmC1U)
+[How to Passthrough a Disk to VM- Proxmox Docs](https://pve.proxmox.com/wiki/Passthrough_Physical_Disk_to_Virtual_Machine_(VM))
+
+```
+ls -n /dev/disk/by-id/
+/sbin/qm set [VM-ID] -virtio2 /dev/disk/by-id/[DISK-ID]
+```
+
+> Right-click Hard Disk > Disable Backup (check box)
+
+#### Passthrough PCI to Proxmox
+[How to Passthrough a PCI to ProxMox - Reddit Source](https://www.reddit.com/r/homelab/comments/b5xpua/the_ultimate_beginners_guide_to_gpu_passthrough/)
+
+[How to Passthrough a PCI to ProxMox - Proxmox Docs](https://pve.proxmox.com/pve-docs/chapter-qm.html#qm_pci_passthrough)
+
+```
+nano /etc/default/grub
+```
+
+- Edit the line that contains GRUB_CMDLINE_LINUX_DEFAULT="quiet" to:
+
+```
+GRUB_CMDLINE_LINUX_DEFAULT="quiet intel_iommu=on iommu=pt pcie_acs_override=downstream,multifunction nofb nomodeset video=vesafb:off,efifb:off"
+
+# Disable OS-Prober
+GRUB_DISABLE_OS_PROBER=true
+```
+
+- I have also seen this GRUB config work:
+
+```
+GRUB_CMDLINE_LINUX_DEFAULT="quiet intel_iommu=on iommu=pt pcie_acs_override=downstream,multifunction video=efifb:eek:ff"
+
+# Disable OS-Prober
+GRUB_DISABLE_OS_PROBER=true
+```
+
+> These extra commands allow for the passthrough to work
+
+> Note: Edit the paramerters to your specs (i.e. change "intel" to "amd" if you are using different CPU). Ex. `GRUB_CMDLINE_LINUX_DEFAULT="quiet amd_iommu=on"`
+
+- For Intel CPUs, add `intel_iommu=on` to the kernel command line also (for AMD CPUs it should be enabled automatically):
+
+```
+echo "intel_iommu=on" >> /etc/kernel/cmdline
+```
+
+- Now, update `grub` with the changes we just made to the `grub` file.
+
+```
+update-grub
+```
+
+- Now, edit the `modules` files as follows:
+
+```
+nano /etc/modules
+# add the following  lines at the bottom of the file
+
+vfio
+vfio_iommu_type1
+vfio_pci
+vfio_virqfd
+```
+
+- __Save__ and exit.
+- You need to refresh your `initramfs` after editign the modules using:
+
+```
+update-initramfs -u -k all
+```
+
+- After letting that command to run, __reboot the Proxmox server__ and then __test if IMMOU is enabled:__
+
+```
+# for Intel
+dmesg | grep -e DMAR -e IOMMU -e Intel-Vi
+
+# for AMD
+dmesg | grep -e DMAR -e IOMMU -e AMD-Vi
+```
+
+- You should __see a reply__ something to the effect of `DMAR: IOMMU enabled`.
+- Now, we must __remap/override the IOMMU mappings__ by creating these files using the following cmdlets:
+
+```
+# first command
+echo "options vfio_iommu_type1 allow_unsafe_interrupts=1" > /etc/modprobe.d/iommu_unsafe_interrupts.conf
+
+# second command
+echo "options kvm ignore_msrs=1" > /etc/modprobe.d/kvm.conf
+```
+
+- As we do not want the Proxmox host system using GPU resources, we need to blacklist the drivers by running these commands:
+
+```
+echo "blacklist radeon" >> /etc/modprobe.d/blacklist.conf
+echo "blacklist nouveau" >> /etc/modprobe.d/blacklist.conf
+echo "blacklist nvidia" >> /etc/modprobe.d/blacklist.conf
+echo "blacklist nvidiafb" >> /etc/modprobe.d/blacklist.conf
+```
+
+> Progress Note: At this point, the host system is configured to passthrough a PCI card to any VM, but the VFIO does not know what PCI lane _specifically_ to passthrough. 
+
+- Now, let's add the PCIE cards we want the VFIO to passthrough to the VMs:
+
+```
+lspci -nn
+```
+
+> Note: The shell will output a jargon of text. Look for specific lines that list the card you want to add to the VFIO. See screenshot for example:
+
+![GPU](https://i.imgur.com/b3PgnLC.png)
+
+> ```
+> 01:00.0 VGA compatible controller: NVIDIA Corporation GP104 [GeForce GTX 1070] (rev a1) (prog-if 00 [VGA controller])
+> 
+> 01:00.1 Audio device: NVIDIA Corporation GP104 High Definition Audio Controller (rev a1)
+> 
+> Make note of the first set of numbers (e.g. 01:00.0 and 01:00.1). We'll need them > for the next step.
+> ```
+
+- Run the command below. Replace __01:00__ with whatever number was next to your GPU when you ran the previous command:
+
+```
+# my SATA controller
+lspci -n -s 00:1f.2
+
+# my GPU VGA
+lspci -n -s 83:00.0
+
+# my GPU Audio
+lspci -n -s 83:00.1
+
+```
+
+- Doing this should output your card's vendor IDs, usually one ID for the GPU and one ID for the Audio bus. See below for example:
+
+```
+# my SATA controller
+00:1f.2 0106: 8086:1d02 (rev 06)
+
+# my GPU VGA
+83:00.0 10de:2484 (rev a1)
+
+# my GPU audio "GA104 High Definition Audio Controller)
+83:00.1 0403: 10de:228b (rev a1)
+```
+
+- Take special note of these vendor ID codes: `10de:228b` and `10de:2484`.
+
+Now we add the GPU vendor ID's to the VFIO, and __remember to replace the id's with your own!__:
+
+```
+echo "options vfio-pci ids=10de:228b,10de:2484 disable_vga=1"> /etc/modprobe.d/vfio.conf
+```
+
+> This new config file we just created is telling VFIO what PCIE cards to passthrough to the VMs. So, if you ever add new PCI cards, then you want to add the vendor IDs to this `/etc/modprobe.d/vfio.conf` file. However, it is important that the device(s) you want to pass through are in a __separate__ IOMMU group. This can be checked with: `find /sys/kernel/iommu_groups/ -type l`
+
+- Next, run this command to update the VFIO file:
+
+```
+update-initramfs -u -k all
+```
+
+- __Wait__ for the terminal to run through the __update until finish__, then, __reboot the Proxmox server again__.
+- After the reboot, __check if your changes were successful__:
+
+```
+lspci -nnk
+```
+
+- If the line __reads, `Kernel driver in use: vfio-pci`__ _or_ the __`in use` line is missing entirely__, __then the device is ready__ to be used for passthrough.
+
+- Now, on the VM side and settings, we want to __enable OMVF (UEFI)__. See screenshot below:
+
+![UEFI_edit](https://i.imgur.com/3QFhPe5.png)
+
+- Next, __edit the VM's config file from the Proxmox host node__  as follows:
+
+```
+nano /etc/pve/qemu-server/<vmid>.conf
+
+# modify each line as you see or add these lines if you do not see the lines
+cpu: host,hidden=1,flags=+pcid
+machine: q35
+args: -cpu 'host,+kvm_pv_unhalt,+kvm_pv_eoi,hv_vendor_id=NV43FIX,kvm=off'
+```
+
+> Where `<vmid>` is the VM ID Number you used during the VM creation (General Tab).
+ 
+ > __BEWARE__: Before you move on to the next step, get the IP address of the VM __before__ you enable the GPU passthrough because the console on the VM will be inaccessible via Proxmox and you must use RDP or SSH to access the terminal on the VM.
+
+- Back in the Hardware settings of the VM, we want to __add a new PCI device__ as follows: __Add (button) > PCI Device > Device (dropdown) > Select the PCI device you want to add (i.e. SATA controller, GPU, etc.)__
+- __Check all the boxes__: `All functions`, `ROM Bar`, `Primary GPU`, `PCI-Express`.
+
+> __No IMMOU Error__: You may get the following error if your CPU does not support IMMOU / Passthrough: _"TASK ERROR: cannot prepare PCI pass-through, IOMMU not present."_ If you get this error message, you need to ensure that __1)__ your CPU supports IOMMU/Passthrough and __2)__ that you enable `VT-d`, `ACS`, `ARI`, `virtualization` on your mother board `BIOS`. __Look under UEFI__ settings and __enable UEFI__ wherever available.  If you try to start the VM and IMMOU is not supported or configured/enabled at the BIOS level, you will also get an error.
+> ![enable__bios_IMMOU](https://i.imgur.com/D9Jp4Xj.png)
+
+- __SSH to your VM__ and __run the following command to check__ if the GPU / PCI is listed:
+
+```
+lspci
+```
+
+> Note to __NVIDIA Users__: If you're still experiencing issues, or the ROM file is causing issues on its own, you might need to patch the ROM file (particularly for NVIDIA cards). There's a great tool for patching GTX 10XX series cards here: https://github.com/sk1080/nvidia-kvm-patcher and here https://github.com/Matoking/NVIDIA-vBIOS-VFIO-Patcher. It only works for 10XX series though. If you have something older, you'll have to patch the ROM file manually using a hex editor, which is beyond the scope of this tutorial guide.
+
+- If you are passing a GPU or any othe PCI that needs drivers, __download the necessary drivers directly to the VM__.
+
+> Important for __Linux Users__: You can run a `wget` followed by the official driver download link via terminal.
+> Example: `wget https://international.download.nvidia.com/long-name-driver-number-specific-to-your-card.run`
+> Also, you will need to install some dependancies on Linux in order to get the NVIDIA driver to compile itself. Run the following to install those dependencies: `sudo apt install build-essential libglvnd-dev pkg-config -y`
+> And then, run the NVIDA installer we previously downloaded via `wget` by running the following command: `sudo ./NVIDIA-Linux [TAB out the rest] + ENTER`.
+> Run `lspci -v` and you should now see the `Kernal driver in use: nvidia` now updated in the list.
+> 
+> ![nvidia_linux_driver](https://i.imgur.com/DVtGyeT.png)
+> On your Linux VM with the GPU passthrough, test the NVIDIA driver using `nvidia-smi`. If you get an "Unknown Error" then you must edit the `/etc/pve/qemu-server/<vmid>.conf` and ensure that that the following is reflected `cpu: host,hidden=1,flags=+pcid`. This will ensure that the host machine cannot detect that it is a virtual machine, thus permitting the NVIDIA driver to run.
+
+# Portainer
+
+- Create a new Ubuntu VM and name it Portainer.
+- Install Docker and Portainer using the following commands:
+
+
+```
+sudo curl -fsSL https://get.docker.com -o get-docker.sh
+
+sudo sh get-docker.sh
+
+sudo apt-get install ./docker-desktop
+
+sudo docker volume create portainer_data
+
+sudo docker run -d -p 8000:8000 -p 9443:9443 --name portainer --restart=always -v /var/run/docker.sock:/var/run/docker.sock -v portainer_data:/data portainer/portainer-ce:latest
+```
+- To access the Portainer web UI, enter the IP address of the VM you created https://x.x.x.x:9443
+- Done.
+
+
+# Plex
+
+- Assuming you have successfully pass a GPU through to your VMs, you can now take advantage of GPU-accelerated transcoding.
+
+> Note: You must have the Plex server claimed and a lifetime or Plex pass subscription to use GPU-accelerated encoding.
+
+#### Installing a Plex Media Server
+- Start by __creating a VM__ that will be your dedicated Plex server.
+- __[Visit the repository](https://support.plex.tv/articles/235974187-enable-repository-updating-for-supported-linux-server-distributions/)__ for Plex and __copy and paste the DEB-based distros__ into the terminal of your new Plex VM to enable the Plex Media Server repo on the Ubuntu instance.
+
+```
+echo deb https://downloads.plex.tv/repo/deb public main | sudo tee /etc/apt/sources.list.d/plexmediaserver.list
+curl https://downloads.plex.tv/plex-keys/PlexSign.key | sudo apt-key add -
+sudo apt install plexmediaserver -y
+sudo apt-get update
+sudo apt upgrade
+```
+
+- If Plex installed successfully, __you should be able to access the Plex web UI__ now from the browser.
+- Next, will want to enalbe instant connection to any network shares where the actual media files are stored on server boot. __Within the Plex server terminal, type:__
+
+```
+sudo nano /etc/fstab
+# at the end of the file enter the path to the network file share IP address (i.e. TrueNas, Synology)
+//192.168.1.200/PlexTest /PlexMedia cifs username=plextest,password=12345 0 0
+```
+
+- Now, we must __create that `PlexMedia` directory__ (same path as set inside the `fstab` config):
+
+```
+sudo mkdir /PlexMedia
+```
+
+> To test, reboot your VM, and enter the following:
+> ```
+> cd /PlexMedia/
+> ls
+> ```
+> If you get a return of folders/files, the `fstab` configuration was a success!
+
+- Now that we have mounted the media file server to our Plex VM, we need to __add this directory in the Plex web UI__ via __Manage > Libraries > Add Library (button) > Select the type of media you want to add (i.e. Movies, TV Shows, etc.) > Next (button) > Browse for the /PlexMedia/ folder by clicking on `/` and scroll down to the `PlexMedia` folder > Add (button) > Add Library (button).__ You should now see some media added to Plex.
+- To upscale the streaming quality, __navigate to the Plex dashboard under > Plex Web > Quality > Video Quality > Uncheck "Use recommended settings > Set the bitrate you want (i.e. 10Mbps, 1080o) > Save Changes (button)__.
+- From the Plex menu, __navigate to Transcoder > Check "Use hardware-accelerated video encoding" > Check "Use hardware accelration when available > Save Changes__
+- __Pass the GPU through to that VM__ (don't forget to grab the VM IP before or use Advance IP Scanner to find it). Done.
 
 # Kubernetes
 Kubernetes is a Greek word κυβερνήτης, meaning “helmsman” or “pilot”. As the name entails, it is a powerful, serverless orchestration tool for managing multiple nodes in a cluster to provide high-availability, scalable web application services. In this use-case, we are rock'n [K3s](https://docs.k3s.io/). Sound amazing? Why not add it to your homelab? Let's go!
@@ -600,271 +890,4 @@ cp -R inventory/sample inventory/my-cluster
 - Once copied, you must edit the `inventory/my-cluster/hosts.ini` to match your network environment. This file supports DNS also. So, if you are using Pi-hole and Unbound, add the DNS address in this file.
 ![k3s_embedded_database](https://i.imgur.com/CrErJsy.png)
 This [diagram](https://docs.k3s.io/architecture) shows an example of a cluster that has a single-node K3s server with an embedded SQLite database.
-
-# PCIE GPU Passthrough
-
-[Mannually Mount SATA Drives w/o HBA/SATA Controller](https://www.youtube.com/watch?v=2mvCaqra6qY)
-
-[How to Passthrough a Disk to VM- YouTube](https://www.youtube.com/watch?v=U-UTMuhmC1U)
-[How to Passthrough a Disk to VM- Proxmox Docs](https://pve.proxmox.com/wiki/Passthrough_Physical_Disk_to_Virtual_Machine_(VM))
-
-```
-ls -n /dev/disk/by-id/
-/sbin/qm set [VM-ID] -virtio2 /dev/disk/by-id/[DISK-ID]
-```
-
-> Right-click Hard Disk > Disable Backup (check box)
-
-#### Passthrough PCI to Proxmox
-[How to Passthrough a PCI to ProxMox - Reddit Source](https://www.reddit.com/r/homelab/comments/b5xpua/the_ultimate_beginners_guide_to_gpu_passthrough/)
-
-[How to Passthrough a PCI to ProxMox - Proxmox Docs](https://pve.proxmox.com/pve-docs/chapter-qm.html#qm_pci_passthrough)
-
-```
-nano /etc/default/grub
-```
-
-- Edit the line that contains GRUB_CMDLINE_LINUX_DEFAULT="quiet" to:
-
-```
-GRUB_CMDLINE_LINUX_DEFAULT="quiet intel_iommu=on iommu=pt pcie_acs_override=downstream,multifunction nofb nomodeset video=vesafb:off,efifb:off"
-
-# Disable OS-Prober
-GRUB_DISABLE_OS_PROBER=true
-```
-
-- I have also seen this GRUB config work:
-
-```
-GRUB_CMDLINE_LINUX_DEFAULT="quiet intel_iommu=on iommu=pt pcie_acs_override=downstream,multifunction video=efifb:eek:ff"
-
-# Disable OS-Prober
-GRUB_DISABLE_OS_PROBER=true
-```
-
-> These extra commands allow for the passthrough to work
-
-> Note: Edit the paramerters to your specs (i.e. change "intel" to "amd" if you are using different CPU). Ex. `GRUB_CMDLINE_LINUX_DEFAULT="quiet amd_iommu=on"`
-
-- For Intel CPUs, add `intel_iommu=on` to the kernel command line also (for AMD CPUs it should be enabled automatically):
-
-```
-echo "intel_iommu=on" >> /etc/kernel/cmdline
-```
-
-- Now, update `grub` with the changes we just made to the `grub` file.
-
-```
-update-grub
-```
-
-- Now, edit the `modules` files as follows:
-
-```
-nano /etc/modules
-# add the following  lines at the bottom of the file
-
-vfio
-vfio_iommu_type1
-vfio_pci
-vfio_virqfd
-```
-
-- __Save__ and exit.
-- You need to refresh your `initramfs` after editign the modules using:
-
-```
-update-initramfs -u -k all
-```
-
-- After letting that command to run, __reboot the Proxmox server__ and then __test if IMMOU is enabled:__
-
-```
-# for Intel
-dmesg | grep -e DMAR -e IOMMU -e Intel-Vi
-
-# for AMD
-dmesg | grep -e DMAR -e IOMMU -e AMD-Vi
-```
-
-- You should __see a reply__ something to the effect of `DMAR: IOMMU enabled`.
-- Now, we must __remap/override the IOMMU mappings__ by creating these files using the following cmdlets:
-
-```
-# first command
-echo "options vfio_iommu_type1 allow_unsafe_interrupts=1" > /etc/modprobe.d/iommu_unsafe_interrupts.conf
-
-# second command
-echo "options kvm ignore_msrs=1" > /etc/modprobe.d/kvm.conf
-```
-
-- As we do not want the Proxmox host system using GPU resources, we need to blacklist the drivers by running these commands:
-
-```
-echo "blacklist radeon" >> /etc/modprobe.d/blacklist.conf
-echo "blacklist nouveau" >> /etc/modprobe.d/blacklist.conf
-echo "blacklist nvidia" >> /etc/modprobe.d/blacklist.conf
-echo "blacklist nvidiafb" >> /etc/modprobe.d/blacklist.conf
-```
-
-> Progress Note: At this point, the host system is configured to passthrough a PCI card to any VM, but the VFIO does not know what PCI lane _specifically_ to passthrough. 
-
-- Now, let's add the PCIE cards we want the VFIO to passthrough to the VMs:
-
-```
-lspci -nn
-```
-
-> Note: The shell will output a jargon of text. Look for specific lines that list the card you want to add to the VFIO. See screenshot for example:
-
-![GPU](https://i.imgur.com/b3PgnLC.png)
-
-> ```
-> 01:00.0 VGA compatible controller: NVIDIA Corporation GP104 [GeForce GTX 1070] (rev a1) (prog-if 00 [VGA controller])
-> 
-> 01:00.1 Audio device: NVIDIA Corporation GP104 High Definition Audio Controller (rev a1)
-> 
-> Make note of the first set of numbers (e.g. 01:00.0 and 01:00.1). We'll need them > for the next step.
-> ```
-
-- Run the command below. Replace __01:00__ with whatever number was next to your GPU when you ran the previous command:
-
-```
-# my SATA controller
-lspci -n -s 00:1f.2
-
-# my GPU VGA
-lspci -n -s 83:00.0
-
-# my GPU Audio
-lspci -n -s 83:00.1
-
-```
-
-- Doing this should output your card's vendor IDs, usually one ID for the GPU and one ID for the Audio bus. See below for example:
-
-```
-# my SATA controller
-00:1f.2 0106: 8086:1d02 (rev 06)
-
-# my GPU VGA
-83:00.0 10de:2484 (rev a1)
-
-# my GPU audio "GA104 High Definition Audio Controller)
-83:00.1 0403: 10de:228b (rev a1)
-```
-
-- Take special note of these vendor ID codes: `10de:228b` and `10de:2484`.
-
-Now we add the GPU vendor ID's to the VFIO, and __remember to replace the id's with your own!__:
-
-```
-echo "options vfio-pci ids=10de:228b,10de:2484 disable_vga=1"> /etc/modprobe.d/vfio.conf
-```
-
-> This new config file we just created is telling VFIO what PCIE cards to passthrough to the VMs. So, if you ever add new PCI cards, then you want to add the vendor IDs to this `/etc/modprobe.d/vfio.conf` file. However, it is important that the device(s) you want to pass through are in a __separate__ IOMMU group. This can be checked with: `find /sys/kernel/iommu_groups/ -type l`
-
-- Next, run this command to update the VFIO file:
-
-```
-update-initramfs -u -k all
-```
-
-- __Wait__ for the terminal to run through the __update until finish__, then, __reboot the Proxmox server again__.
-- After the reboot, __check if your changes were successful__:
-
-```
-lspci -nnk
-```
-
-- If the line __reads, `Kernel driver in use: vfio-pci`__ _or_ the __`in use` line is missing entirely__, __then the device is ready__ to be used for passthrough.
-
-- Now, on the VM side and settings, we want to __enable OMVF (UEFI)__. See screenshot below:
-
-![UEFI_edit](https://i.imgur.com/3QFhPe5.png)
-
-- Next, __edit the VM's config file from the Proxmox host node__  as follows:
-
-```
-nano /etc/pve/qemu-server/<vmid>.conf
-
-# modify each line as you see or add these lines if you do not see the lines
-cpu: host,hidden=1,flags=+pcid
-machine: q35
-args: -cpu 'host,+kvm_pv_unhalt,+kvm_pv_eoi,hv_vendor_id=NV43FIX,kvm=off'
-```
-
-> Where `<vmid>` is the VM ID Number you used during the VM creation (General Tab).
- 
- > __BEWARE__: Before you move on to the next step, get the IP address of the VM __before__ you enable the GPU passthrough because the console on the VM will be inaccessible via Proxmox and you must use RDP or SSH to access the terminal on the VM.
-
-- Back in the Hardware settings of the VM, we want to __add a new PCI device__ as follows: __Add (button) > PCI Device > Device (dropdown) > Select the PCI device you want to add (i.e. SATA controller, GPU, etc.)__
-- __Check all the boxes__: `All functions`, `ROM Bar`, `Primary GPU`, `PCI-Express`.
-
-> __No IMMOU Error__: You may get the following error if your CPU does not support IMMOU / Passthrough: _"TASK ERROR: cannot prepare PCI pass-through, IOMMU not present."_ If you get this error message, you need to ensure that __1)__ your CPU supports IOMMU/Passthrough and __2)__ that you enable `VT-d`, `ACS`, `ARI`, `virtualization` on your mother board `BIOS`. __Look under UEFI__ settings and __enable UEFI__ wherever available.  If you try to start the VM and IMMOU is not supported or configured/enabled at the BIOS level, you will also get an error.
-> ![enable__bios_IMMOU](https://i.imgur.com/D9Jp4Xj.png)
-
-- __SSH to your VM__ and __run the following command to check__ if the GPU / PCI is listed:
-
-```
-lspci
-```
-
-> Note to __NVIDIA Users__: If you're still experiencing issues, or the ROM file is causing issues on its own, you might need to patch the ROM file (particularly for NVIDIA cards). There's a great tool for patching GTX 10XX series cards here: https://github.com/sk1080/nvidia-kvm-patcher and here https://github.com/Matoking/NVIDIA-vBIOS-VFIO-Patcher. It only works for 10XX series though. If you have something older, you'll have to patch the ROM file manually using a hex editor, which is beyond the scope of this tutorial guide.
-
-- If you are passing a GPU or any othe PCI that needs drivers, __download the necessary drivers directly to the VM__.
-
-> Important for __Linux Users__: You can run a `wget` followed by the official driver download link via terminal.
-> Example: `wget https://international.download.nvidia.com/long-name-driver-number-specific-to-your-card.run`
-> Also, you will need to install some dependancies on Linux in order to get the NVIDIA driver to compile itself. Run the following to install those dependencies: `sudo apt install build-essential libglvnd-dev pkg-config -y`
-> And then, run the NVIDA installer we previously downloaded via `wget` by running the following command: `sudo ./NVIDIA-Linux [TAB out the rest] + ENTER`.
-> Run `lspci -v` and you should now see the `Kernal driver in use: nvidia` now updated in the list.
-> 
-> ![nvidia_linux_driver](https://i.imgur.com/DVtGyeT.png)
-> On your Linux VM with the GPU passthrough, test the NVIDIA driver using `nvidia-smi`. If you get an "Unknown Error" then you must edit the `/etc/pve/qemu-server/<vmid>.conf` and ensure that that the following is reflected `cpu: host,hidden=1,flags=+pcid`. This will ensure that the host machine cannot detect that it is a virtual machine, thus permitting the NVIDIA driver to run.
-
-# Plex Media Server
-
-- Assuming you have successfully pass a GPU through to your VMs, you can now take advantage of GPU-accelerated transcoding
-
-> Note: You must have the Plex server claimed and a lifetime or Plex pass subscription to use GPU-accelerated encoding.
-
-#### Installing a Plex Media Server
-- Start by __creating a VM__ that will be your dedicated Plex server.
-- __[Visit the repository](https://support.plex.tv/articles/235974187-enable-repository-updating-for-supported-linux-server-distributions/)__ for Plex and __copy and paste the DEB-based distros__ into the terminal of your new Plex VM to enable the Plex Media Server repo on the Ubuntu instance.
-
-```
-echo deb https://downloads.plex.tv/repo/deb public main | sudo tee /etc/apt/sources.list.d/plexmediaserver.list
-curl https://downloads.plex.tv/plex-keys/PlexSign.key | sudo apt-key add -
-sudo apt install plexmediaserver -y
-sudo apt-get update
-sudo apt upgrade
-```
-
-- If Plex installed successfully, __you should be able to access the Plex web UI__ now from the browser.
-- Next, will want to enalbe instant connection to any network shares where the actual media files are stored on server boot. __Within the Plex server terminal, type:__
-
-```
-sudo nano /etc/fstab
-# at the end of the file enter the path to the network file share IP address (i.e. TrueNas, Synology)
-//192.168.1.200/PlexTest /PlexMedia cifs username=plextest,password=12345 0 0
-```
-
-- Now, we must __create that `PlexMedia` directory__ (same path as set inside the `fstab` config):
-
-```
-sudo mkdir /PlexMedia
-```
-
-> To test, reboot your VM, and enter the following:
-> ```
-> cd /PlexMedia/
-> ls
-> ```
-> If you get a return of folders/files, the `fstab` configuration was a success!
-
-- Now that we have mounted the media file server to our Plex VM, we need to __add this directory in the Plex web UI__ via __Manage > Libraries > Add Library (button) > Select the type of media you want to add (i.e. Movies, TV Shows, etc.) > Next (button) > Browse for the /PlexMedia/ folder by clicking on `/` and scroll down to the `PlexMedia` folder > Add (button) > Add Library (button).__ You should now see some media added to Plex.
-- To upscale the streaming quality, __navigate to the Plex dashboard under > Plex Web > Quality > Video Quality > Uncheck "Use recommended settings > Set the bitrate you want (i.e. 10Mbps, 1080o) > Save Changes (button)__.
-- From the Plex menu, __navigate to Transcoder > Check "Use hardware-accelerated video encoding" > Check "Use hardware accelration when available > Save Changes__
-- __Pass the GPU through to that VM__ (don't forget to grab the VM IP before or use Advance IP Scanner to find it). Done.
 
