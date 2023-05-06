@@ -458,7 +458,7 @@ lspci -nn
 
 ```
 # my SATA controller
-lspci -n -s 00:1f.2
+lspci -n -s 01:00.0
 
 # my GPU VGA
 lspci -n -s 83:00.0
@@ -472,10 +472,10 @@ lspci -n -s 83:00.1
 
 ```
 # my SATA controller
-00:1f.2 0106: 8086:1d02 (rev 06)
+01:00.0 0106: 1b21:1064 (rev 02)
 
 # my GPU VGA
-83:00.0 10de:2484 (rev a1)
+83:00.0 0300: 10de:2484 (rev a1)
 
 # my GPU audio "GA104 High Definition Audio Controller)
 83:00.1 0403: 10de:228b (rev a1)
