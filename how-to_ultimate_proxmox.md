@@ -187,6 +187,27 @@ Ubuntu __20.04__ LTS
 ```
 wget https://cloud-images.ubuntu.com/daily/server/focal/current/focal-server-cloudimg-amd64.img
 ```
+
+### When WGET Fails
+
+If you get any of the following errors: "failed: No route to host" or "connect: Network is unreachable", then _you have a network problem_.  First thing to try is a simple ping test to google: `ping google.com`. If the return is "destinaion host unreachable" then your Proxmox hypervisor is unable to reach the internet for some reason. Here's a few things you can do/check:
+- Check that your nameserver is set to the IP gateway of your router (this varies depending on your router, but you can check the label on the routher to see if it lists a default gateway IP address.) Open a shell and type:
+
+```
+nano /etc/resolv.conf
+```
+
+- If the `nameserver` is _not_ the same as your gateway IP of your router, then change it to match.
+- You can also check if your network is configured correctly from the GUI.
+
+![gateway_check](https://i.imgur.com/ccacEYn.png)
+
+- After making the appropriate changes, run the following:
+
+```
+service networking restart
+```
+
 - Wait for the image to download to your Proxmox server. Next, we need to run the following command to create a virtual machine and attach that image to this VM:  
 ```
 qm create 8000 --memory 2048 --name 20.04-server --net0 virtio,bridge=vmbr0
