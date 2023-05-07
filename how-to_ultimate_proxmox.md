@@ -125,9 +125,9 @@ See the [ZFS Proxmox Wiki](https://pve.proxmox.com/wiki/ZFS_on_Linux) for more d
 ```
 zfs create rpool/backups
 
-zfs create rpool/iso`
+zfs create rpool/iso
 
-zfs create rpool/vm`
+zfs create rpool/vm
 ```
 
 > If `rpool` is _not_ the default, then you would type out: `zfs create [mountpoint]/backups` for example.
