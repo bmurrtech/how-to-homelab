@@ -74,7 +74,7 @@ This guide will show you how create the __ultimate__ Proxmox hypervisor with:
  
   ![interface2](https://i.imgur.com/Y1OWYWD.png)
 
-#### Installation Issues
+### Installation Issues
 - If an install goes ary, you can always use the PrxoMox debug mode built into the bootable .iso installer.
 - Try rebooting with the .iso installer plugged in, but this time select "Advance Options" (underneath "Install Proxmox VE") and choose the "Install Proxmox VE (Debug mode)" option.
 - This will boot up in a Linux Debian CLI mode that allows you access to powerful CLI commands (i.e. wipe the drives and try reinstalling ProxMox). Type `exit` after it loads and the prompt is ready.
@@ -85,7 +85,7 @@ This guide will show you how create the __ultimate__ Proxmox hypervisor with:
 - The EULA should popup, and you can now attempt to reinstall Proxmox.
 - You can also access BusyBox in dev/debug mode to fix a ZFS error, see below for the error message:
 
-#### Boot fails and goes into busybox
+### Boot fails and goes into busybox
 If booting fails with something like:
 
 ```
@@ -101,7 +101,7 @@ Hint: try: zpool import -R /rpool -N rpool
 # ZFS Configuration
 See the [ZFS Proxmox Wiki](https://pve.proxmox.com/wiki/ZFS_on_Linux) for more details and commands. 
 
-#### Creating a ZFS Pool and Cache
+### Creating a ZFS Pool and Cache
 > Note:  RAID0 forces stripped drives to the _smallest_ drive size (i.e. 2TB + 118GB = 118GB storage pool size).
 > Note: RAID-Z or mirrored (RAID1) ZFS configurations will _not_ work with cache drive setups. 
 - When selecting a disk, choose the primary (largest) disk and then click the options button.
@@ -114,18 +114,23 @@ See the [ZFS Proxmox Wiki](https://pve.proxmox.com/wiki/ZFS_on_Linux) for more d
 
 - You can check the status of the pool by typing `zpool status [name_of_pool]` (the default pool name is `rpool`). Or, you can check it in the UI. Navigate to Node (pve) > Disks > ZFS. You should see the cache drive in the pool.
 
-#### Adding a Cache Drive
+### Adding a Cache Drive
 - Using SSH or the console, type the following: `zpool create rpool /dev/[primary_drive_name] cache /dev/[cache_drive_name]
 - Type `zpool status [pool_name]` for an overivew of your new ZFS pool with cache.
 
-#### Create ZFS Datasets
+### Create ZFS Datasets
 - You can view your current ZFS pool via `zpool list` and `zfs list`. Take note of the `mountpoint` name (if you created a ZFS pool at installation, this will be called `rpool` by default).
 - To create datasets for storing `ISOs` and VM storage and more, type the following:
- - `zfs create [mountpoint]/backups`
- - `zfs create [mountpoint]/iso`
- - `zfs create [mountpoint]/vm`
 
-> If `rpool` is the default, then you would type out: `zfs create rpool/backups` for example.
+```
+zfs create rpool/backups
+
+zfs create rpool/iso`
+
+zfs create rpool/vm`
+```
+
+> If `rpool` is _not_ the default, then you would type out: `zfs create [mountpoint]/backups` for example.
 
 - These dataset will share the total pool size. It dynamically allocates disk space as needed.
 - Now we need to mount/add these datasets at the `Datacenter` level:
