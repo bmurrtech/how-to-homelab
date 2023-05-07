@@ -528,8 +528,9 @@ args: -cpu 'host,+kvm_pv_unhalt,+kvm_pv_eoi,hv_vendor_id=NV43FIX,kvm=off'
 - Back in the Hardware settings of the VM, we want to __add a new PCI device__ as follows: __Add (button) > PCI Device > Device (dropdown) > Select the PCI device you want to add (i.e. SATA controller, GPU, etc.)__
 - __Check all the boxes__: `All functions`, `ROM Bar`, `Primary GPU`, `PCI-Express`.
 
-> __No IMMOU Error__: You may get the following error if your CPU does not support IMMOU / Passthrough: _"TASK ERROR: cannot prepare PCI pass-through, IOMMU not present."_ If you get this error message, you need to ensure that __1)__ your CPU supports IOMMU/Passthrough and __2)__ that you enable `VT-d`, `ACS`, `ARI`, `virtualization` on your mother board `BIOS`. __Look under UEFI__ settings and __enable UEFI__ wherever available.  If you try to start the VM and IMMOU is not supported or configured/enabled at the BIOS level, you will also get an error.
-> ![enable__bios_IMMOU](https://i.imgur.com/D9Jp4Xj.png)
+![enable__bios_IMMOU](https://i.imgur.com/D9Jp4Xj.png)
+
+> __No IMMOU Error__: You may get the following error if your CPU does not support IMMOU / Passthrough: _"TASK ERROR: cannot prepare PCI pass-through, IOMMU not present."_ If you get this error message, you need to __1) ensure that your CPU supports IOMMU (I/O Memory Management Unit)/Intel Virtualization Technology for Directed I/O (VT-d)__ and __2) that you [enable IOMMU in your BIOS](https://us.informatiweb.net/tutorials/it/bios/enable-iommu-or-vt-d-in-your-bios.html#msi-bios-american-megatrends).__ Navigate through each BIOS screen using the “arrow” keys and find the “IOMMU,” “I/O Memory Management Unit,” or “Intel ® VT-d”setting (usually located under the “Advanced” or “Chipset/Northbridge/Tylersburg IOH/Intel VT for Directed I/O Configuration”settings menu).`VT-d`, `ACS`, `ARI`, `virtualization` on your mother board `BIOS`. __Look under UEFI__ settings and __enable UEFI__ wherever available.  If you try to start the VM and IMMOU is not supported or configured/enabled at the BIOS level, you will also get an error.
 
 - __SSH to your VM__ and __run the following command to check__ if the GPU / PCI is listed:
 
