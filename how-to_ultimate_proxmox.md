@@ -13,6 +13,7 @@ This guide will show you how create the __ultimate__ Proxmox hypervisor with:
 - [Create Cloud Init Cloud Image Template](#cloud-init-template)
 - [Access Your Lab Anywhere](#remote-access)
 - [Setup GPU / PCI Card Passthrough](#pcie-gpu-passthrough)
+- [TrueNAS Scale](#truenas-scale)
 - [Portainer Setup](#portainer)
 - [Plex Media Server](#plex)
 - [Ansible Automation Setup](#ansible)
@@ -193,26 +194,6 @@ Ubuntu __20.04__ LTS
 wget https://cloud-images.ubuntu.com/daily/server/focal/current/focal-server-cloudimg-amd64.img
 ```
 
-### When WGET Fails
-
-If you get any of the following errors: "failed: No route to host" or "connect: Network is unreachable", then _you have a network problem_.  First thing to try is a simple ping test to google: `ping google.com`. If the return is "destinaion host unreachable" then your Proxmox hypervisor is unable to reach the internet for some reason. Here's a few things you can do/check:
-- Check that your nameserver is set to the IP gateway of your router (this varies depending on your router, but you can check the label on the routher to see if it lists a default gateway IP address.) Open a shell and type:
-
-```
-nano /etc/resolv.conf
-```
-
-- If the `nameserver` is _not_ the same as your gateway IP of your router, then change it to match.
-- You can also check if your network is configured correctly from the GUI.
-
-![gateway_check](https://i.imgur.com/ccacEYn.png)
-
-- After making the appropriate changes, run the following:
-
-```
-service networking restart
-```
-
 - Wait for the image to download to your Proxmox server. Next, we need to run the following command to create a virtual machine and attach that image to this VM:  
 ```
 qm create 8000 --memory 2048 --name 20.04-server --net0 virtio,bridge=vmbr0
@@ -263,6 +244,26 @@ qm set 8000 --serial0 socket --vga serial0
 qm template [vm_id]
 ```
 - You should see the icon change to a paper icon with a monitor, indicating that it has become a template.
+
+### When WGET Fails
+
+If you get any of the following errors: "failed: No route to host" or "connect: Network is unreachable", then _you have a network problem_.  First thing to try is a simple ping test to google: `ping google.com`. If the return is "destinaion host unreachable" then your Proxmox hypervisor is unable to reach the internet for some reason. Here's a few things you can do/check:
+- Check that your nameserver is set to the IP gateway of your router (this varies depending on your router, but you can check the label on the routher to see if it lists a default gateway IP address.) Open a shell and type:
+
+```
+nano /etc/resolv.conf
+```
+
+- If the `nameserver` is _not_ the same as your gateway IP of your router, then change it to match.
+- You can also check if your network is configured correctly from the GUI.
+
+![gateway_check](https://i.imgur.com/ccacEYn.png)
+
+- After making the appropriate changes, run the following:
+
+```
+service networking restart
+```
 
 #### Cloning Cloud Template
 - Proxmox has [documentation on the process here](https://pve.proxmox.com/wiki/Cloud-Init_Support).
@@ -555,6 +556,64 @@ lspci
 > 
 > ![nvidia_linux_driver](https://i.imgur.com/DVtGyeT.png)
 > On your Linux VM with the GPU passthrough, test the NVIDIA driver using `nvidia-smi`. If you get an "Unknown Error" then you must edit the `/etc/pve/qemu-server/<vmid>.conf` and ensure that that the following is reflected `cpu: host,hidden=1,flags=+pcid`. This will ensure that the host machine cannot detect that it is a virtual machine, thus permitting the NVIDIA driver to run.
+
+# TrueNAS Scale
+
+### TrueNAS Scale Install in Proxmox
+
+- First, download the TrueNAS Scale ISO file
+- Upload it to the Proxmox ISO storage
+- Create new VM and select that TrueNAS Scale ISO as the OS
+- Leave the System tab defaults (no changes) and click next onto the disks section
+- On the Disks tab, click the `Advance` (checkbox) so we get more settings to tweak. Check the following: `SSD emulation`, `Discard`, and change the __Disk size (GiB)__ to `16`. Leave all other settings as-is.
+
+![truenas_disk_settings](https://i.imgur.com/Z94xuGE.png)
+
+- On the CPU tab, start off with more cores than less (you can always upgrade/downgrade vCPUs later, but you cannot give it more vCPUS than the total core limit you initially set at creation). In my case, I'm giving it:
+  - 2 sockets and 6 cores for a total of 12 cores.
+  - Check `Enable NUMA` (checkbox)
+  - In advance settings, turn `md-clear` on (if your device supports it, you'll know if it works or not when you first try to boot it and if any error messages popup)
+  - In advance settings, turn on `aes`
+  - In advance settings, turn on `pdpe1gb`
+  - In the `Type` field, select your CPU's iteration (i.e. IvyBridge)
+- In the `Memory` tab, TrueNAS recommends at least __8GB of RAM__ for better performance and fewer issues. (In my case, I need `262144` MiB of RAM for my Chia Farm setup).
+  - I also disabled `Balloning Device` by unchecking the box. This avoids complicating things.
+- Leave the `Networking` section as-is.
+- Finish the VM config and start it up. If you don't get any errors, you're good to go!
+
+### TrueNAS Scale Install DOS Wizard
+- Select `Install/Upgrade`
+- Toggle to the drive you wish to install TrueNAS on and hit `Spacebar` to select it and then hit `OK` to continue.
+- Say `Yes` to overwriting the disk to install TrueNAS.
+- Create Admin user (option 1) and set a password for that account.
+- Hit `OK` and wait for TrueNAS to install, then shutdown the VM to add PCIe hardware (i.e. adding JBOD drives to TrueNAS).
+
+### Passing Through PCIe Storage Controllers to TrueNAS
+- Navigate to __TrueNAS VM > Hardware > Add (button) > and add PCI Device__
+  - Sort the `Device` dropdown menu by name to find your PCI device quicker.
+  - Disable `ROM-Bar` to avoid booting performance issues.
+  - Leave everything else as-is and add it.
+
+> Note: In order for the PCI devices to work, make sure to follow the steps outlined in [the PCI passthrough guide](#pcie-gpu-passthrough) above. Basically, you need to edit the `grub` config to include IOMMU. Ex. `GRUB_CMDLINE_LINUX_DEFAULT="quiet intel_iommu=on"` and `update-grub` then `reboot`.
+
+### Adding Drives to TrueNAS
+- Now that PCI devices and IOMMU passthrough are added, start the TrueNAS VM up and get the web UI IP address.
+- Open your browser, put in that IP, enter your creds, and you should have reached the TrueNAS interface/dashboard.
+- Customize your dashboard views to your liking (configure button, top right).
+  - Toggle off: everything in `Network`, `System Information`, `Help`, then `Save` (button)
+- Navigate to __Storage (left pane) > Create Pool (top right button) > Assign a name (i.e. dataAA) > Select all the drives you wish to add to that pool__ (12 disks / pool is a good start) __> Select your preferred disk array type (under Data VDevs) > Create the pool.__
+
+> "Stripe" is ideal for performance and size, but not redundancy.
+
+- Set the `Block Size Record` to `1` by navigating to: __Datasets (left pane) > Click on the pool (from list) > Click Dataset (button) > Assign a name (same as pool name) > Disable `Sync` (dropdown) > Turn `Compression` OFF (dropdown) > Turn `Enable Atime` OFF > Turn `ZFS Depreciation` OFF > Set `Case Sensitivity` to `Sensitive` > Open the Advance settings > Change the `Record Size` to `1M` > Leave the rest AS-IS.__
+- Navigate to: __> Shares (left pane) > Click the `UNIX (NFS) Shares` Add button > Set the Path to the Pool__ (i.e. `/mnt/dataAA/dataAA`) __> Hit `Save` > Agree to `Enable Service` (prompt)__
+
+> Note: the `/mnt/dataAA/dataAA` is the mountpoint/patg that will be used for mounting your NFS share to other machines on the network.
+
+> If you want Windows to recognize the storage pool, you need to change the Dataset settings in `Share Type` to `SMB`. Also, you want to create a `Windows (SMB)` Share instead of the `UNIX (NFS)` share.
+
+- If you want to access your TrueNAS shares _without_ credentials, then navigate to: __`System Settings` (left pane) > Services > NFS > Check `Enable NFSv4`__. Hit `Save`.
+- While in the `General Options` you can modify the `Number of Threads` also.
 
 # Portainer
 
