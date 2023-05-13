@@ -13,6 +13,8 @@ This guide will show you how create the __ultimate__ Proxmox hypervisor with:
 - [Create Cloud Init Cloud Image Template](#cloud-init-template)
 - [Access Your Lab Anywhere](#remote-access)
 - [Setup GPU / PCI Card Passthrough](#pcie-gpu-passthrough)
+- [Create Windows VM](#windows-proxmox-install)
+- [Pihole Proxmox Setup](#pihole-proxmox-install)
 - [TrueNAS Scale](#truenas-scale)
 - [Portainer Setup](#portainer)
 - [Plex Media Server](#plex)
@@ -556,6 +558,140 @@ lspci
 > 
 > ![nvidia_linux_driver](https://i.imgur.com/DVtGyeT.png)
 > On your Linux VM with the GPU passthrough, test the NVIDIA driver using `nvidia-smi`. If you get an "Unknown Error" then you must edit the `/etc/pve/qemu-server/<vmid>.conf` and ensure that that the following is reflected `cpu: host,hidden=1,flags=+pcid`. This will ensure that the host machine cannot detect that it is a virtual machine, thus permitting the NVIDIA driver to run.
+
+# Windows Proxmox Install
+
+- [TechnoTim's Win10 Proxmox Install](https://www.youtube.com/watch?v=6c-6xBkD2J4)
+- Download Windows ISO and _virtIO_.
+- Create a VM (set to Windows)
+- Add a 2nd CD-ROM drive and attach the _virtIO_ drivers.
+- Boot the machine and __select custom install__
+- Click __Load Drivers__ and browser for the following files in that _virtIO_ CD-ROM:
+
+```
+> vioscsi > w10 > amd64 > ok > next
+> netkvm > w10 > amd64 > ok > next
+> ballon> w10 > amd64 > ok > next
+```
+
+> Note: You may have to _uncheck_ the "hide drivers that aren't compaitble" box to see the drivers.
+
+- Select the unallocated drive and click next to install Windows.
+- Set up your Window account.
+- Load the following drivers:
+
+```
+> WIN + S > Device Manager > Other Devices > Update Driver > Browse my computer > Select the _virtIO_ disk > ok > install
+```
+
+- Using the Windows explorer `WIN + E` navigate to:
+
+```
+CD Drive > Guest Agent > Double-click `qemu-ga-x86_64` > Install
+```
+
+- Reboot the Windows machine.
+
+> You should see an IP address in the VM > Summary tab after you restart it.
+
+# Pihole Proxmox Install
+
+- Create a new VM (ideally Ubuntu 20.04 cloudinit)
+- Access the VM console and run an update:
+
+```
+sudo apt update
+```
+
+- Set a static IP address for this new VM in your router settings (PiHole needs to be a static IP because it operates as a DNS server)
+- Next, install PiHole
+
+```
+curl -sSL https://install.pi-hole.net | bash
+```
+
+> Note: If you get a `'curl' not found` message, you can install `curl` by entering: `sudo apt install curl`
+
+- Progress through the prompts, just makes sure to agree to install the `Admin Web Interface` with dependancies.
+- Once the PiHole installation completes, take note of the web UI portal IP address (should be the static IP you set before), and __take special note of the unique password generated__ to access the web UI. For example: `http://192.168.1.22/admin`
+
+### Sus List
+```
+https://raw.githubusercontent.com/PolishFiltersTeam/KADhosts/master/KADhosts.txt https://raw.githubusercontent.com/FadeMind/hosts.extras/master/add.Spam/hosts https://v.firebog.net/hosts/static/w3kbl.txt https://raw.githubusercontent.com/matomo-org/referrer-spam-blacklist/master/spammers.txt https://someonewhocares.org/hosts/zero/hosts https://raw.githubusercontent.com/VeleSila/yhosts/master/hosts https://winhelp2002.mvps.org/hosts.txt https://v.firebog.net/hosts/neohostsbasic.txt https://raw.githubusercontent.com/RooneyMcNibNug/pihole-stuff/master/SNAFU.txt https://paulgb.github.io/BarbBlock/blacklists/hosts-file.txt
+```
+
+### Ad List
+
+https://adaway.org/hosts.txt https://v.firebog.net/hosts/AdguardDNS.txt https://v.firebog.net/hosts/Admiral.txt https://raw.githubusercontent.com/anudeepND/blacklist/master/adservers.txt https://s3.amazonaws.com/lists.disconnect.me/simple_ad.txt https://v.firebog.net/hosts/Easylist.txt https://pgl.yoyo.org/adservers/serverlist.php hostformat=hosts&showintro=0&mimetype=plaintext https://raw.githubusercontent.com/FadeMind/hosts.extras/master/UncheckyAds/hosts https://raw.githubusercontent.com/bigdargon/hostsVN/master/hosts https://raw.githubusercontent.com/jdlingyu/ad-wars/master/hosts
+
+### Tracking List
+https://v.firebog.net/hosts/Easyprivacy.txt https://v.firebog.net/hosts/Prigent-Ads.txt https://raw.githubusercontent.com/FadeMind/hosts.extras/master/add.2o7Net/hosts https://raw.githubusercontent.com/crazy-max/WindowsSpyBlocker/master/data/hosts/spy.txt https://hostfiles.frogeye.fr/firstparty-trackers-hosts.txt https://www.github.developerdan.com/hosts/lists/ads-and-tracking-extended.txt https://raw.githubusercontent.com/Perflyst/PiHoleBlocklist/master/android-tracking.txt https://raw.githubusercontent.com/Perflyst/PiHoleBlocklist/master/SmartTV.txt https://raw.githubusercontent.com/Perflyst/PiHoleBlocklist/master/AmazonFireTV.txt https://gitlab.com/quidsup/notrack-blocklists/raw/master/notrack-blocklist.txt
+
+### Malicous List
+https://raw.githubusercontent.com/DandelionSprout/adfilt/master/Alternate%20versions%20Anti-Malware%20List/AntiMalwareHosts.txt https://osint.digitalside.it/Threat-Intel/lists/latestdomains.txt https://s3.amazonaws.com/lists.disconnect.me/simple_malvertising.txt https://v.firebog.net/hosts/Prigent-Crypto.txt https://raw.githubusercontent.com/FadeMind/hosts.extras/master/add.Risk/hosts https://bitbucket.org/ethanr/dns-blacklists/raw/8575c9f96e5b4a1308f2f12394abd86d0927a4a0/bad_lists/Mandiant_APT1_Report_Appendix_D.txt https://phishing.army/download/phishing_army_blocklist_extended.txt https://gitlab.com/quidsup/notrack-blocklists/raw/master/notrack-malware.txt https://v.firebog.net/hosts/RPiList-Malware.txt https://v.firebog.net/hosts/RPiList-Phishing.txt https://raw.githubusercontent.com/Spam404/lists/master/main-blacklist.txt https://raw.githubusercontent.com/AssoEchap/stalkerware-indicators/master/generated/hosts https://urlhaus.abuse.ch/downloads/hostfile/ https://malware-filter.gitlab.io/malware-filter/phishing-filter-hosts.txt https://v.firebog.net/hosts/Prigent-Malware.txt
+
+### Porn Block and More List
+https://zerodot1.gitlab.io/CoinBlockerLists/hosts_browser https://raw.githubusercontent.com/chadmayfield/my-pihole-blocklists/master/lists/pi_blocklist_porn_top1m.list https://v.firebog.net/hosts/Prigent-Adult.txt https://raw.githubusercontent.com/anudeepND/blacklist/master/facebook.txt
+
+### Whitelisting Common Services/Domains
+
+- For a quick and easy blanket whitelist of most common domains, [run this python script](https://github.com/anudeepND/whitelist).
+
+```
+sudo apt install python3
+
+git clone https://github.com/anudeepND/whitelist.git
+sudo python3 whitelist/scripts/whitelist.py
+
+git clone https://github.com/anudeepND/whitelist.git
+cd whitelist/scripts
+sudo ./referral.sh
+
+- To set your whitelist to automatically update, perform the following commands:
+
+```
+cd /opt/
+sudo git clone https://github.com/anudeepND/whitelist.git
+```
+
+- Make the script to run the script at 1AM on the last day of the week
+
+```
+sudo nano /etc/crontab
+```
+
+- Add this line at the end of the file:
+
+```
+0 1 * * */7     root    /opt/whitelist/scripts/whitelist.py
+```
+
+- `CTRL + X` then `Y` and `Enter`. And, to finish, run:
+
+```
+sudo python3 whitelist/scripts/whitelist.py
+```
+
+
+- If you ever need to remove the blanket-whitelist, simply enter:
+
+```
+sudo python3 uninstall.py
+```
+
+- For a more customized, granular control of your whitelisting, see [Commonly Whitelisted Domain List](https://discourse.pi-hole.net/t/commonly-whitelisted-domains/212)
+
+```
+pihole -w -spclient.wg.spotify.com apresolve.spotify.com && pihole -w api-tv.spotify.com &&
+
+pihole -w -spclient.wg.spotify.com apresolve.spotify.com api-tv.spotify.com upload.facebook.com creative.ak.fbcdn.net external-lhr0-1.xx.fbcdn.net external-lhr1-1.xx.fbcdn.net external-lhr10-1.xx.fbcdn.net external-lhr2-1.xx.fbcdn.net external-lhr3-1.xx.fbcdn.net external-lhr4-1.xx.fbcdn.net external-lhr5-1.xx.fbcdn.net external-lhr6-1.xx.fbcdn.net external-lhr7-1.xx.fbcdn.net external-lhr8-1.xx.fbcdn.net external-lhr9-1.xx.fbcdn.net fbcdn-creative-a.akamaihd.net scontent-lhr3-1.xx.fbcdn.net scontent.xx.fbcdn.net scontent.fgdl5-1.fna.fbcdn.net graph.facebook.com b-graph.facebook.com connect.facebook.com cdn.fbsbx.com api.facebook.com edge-mqtt.facebook.com mqtt.c10r.facebook.com portal.fb.com star.c10r.facebook.com star-mini.c10r.facebook.com b-api.facebook.com fb.me bigzipfiles.facebook.com l.facebook.com www.facebook.com scontent-atl3-1.xx.fbcdn.net static.xx.fbcdn.net edge-chat.messenger.com video.xx.fbcdn.net external-ort2-1.xx.fbcdn.net scontent-ort2-1.xx.fbcdn.net edge-chat.facebook.com scontent-mia3-1.xx.fbcdn.net web.facebook.com rupload.facebook.com l.messenger.com plex.tv tvdb2.plex.tv pubsub.plex.bz proxy.plex.bz proxy02.pop.ord.plex.bz cpms.spop10.ams.plex.bz meta-db-worker02.pop.ric.plex.bz meta.plex.bz tvthemes.plexapp.com.cdn.cloudflare.net tvthemes.plexapp.com 106c06cd218b007d-b1e8a1331f68446599e96a4b46a050f5.ams.plex.services meta.plex.tv cpms35.spop10.ams.plex.bz proxy.plex.tv metrics.plex.tv pubsub.plex.tv status.plex.tv www.plex.tv node.plexapp.com nine.plugins.plexapp.com staging.plex.tv app.plex.tv o1.email.plex.tv  o2.sg0.plex.tv dashboard.plex.tv gravatar.com thetvdb.com themoviedb.com chtbl.com services.sonarr.tv skyhook.sonarr.tv download.sonarr.tv apt.sonarr.tv forums.sonarr.tv dl.dropboxusercontent.com ns1.dropbox.com ns2.dropbox.com s.marketwatch.com fpdownload.adobe.com entitlement.auth.adobe.com livepassdl.conviva.com gfwsl.geforce.com delivery.vidible.tv img.vidible.tv videos.vidible.tv edge.api.brightcove.com cdn.vidible.tv v.w-x.co appspot-preview.l.google.com tracking.epicgames.com cloudsync-prod.s3.amazonaws.com 79423.analytics.edgekey.net assets.adobedtm.com nexus.ensighten.com telemetry-console.api.playstation.com twitter.com upload.twitter.com api.twitter.com mobile.twitter.com
+```
+
+- And also run a `--white-regex` for the following:
+
+```
+pihole --white-regex (\.|^)twimg\.com$ (\.|^)reddit\.com$ (\.|^)redd\.it$ [a-z]\.thumbs\.redditmedia\.com
+```
 
 # TrueNAS Scale
 
