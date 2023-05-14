@@ -614,6 +614,11 @@ curl -sSL https://install.pi-hole.net | bash
 
 - Progress through the prompts, just makes sure to agree to install the `Admin Web Interface` with dependancies.
 - Once the PiHole installation completes, take note of the web UI portal IP address (should be the static IP you set before), and __take special note of the unique password generated__ to access the web UI. For example: `http://192.168.1.22/admin`
+- [Block List Project](https://github.com/blocklistproject/Lists) has a great starting point for implementing black lists. Simply copy the github link you want and import it through the Pihole GUI:
+
+![pihole_adlist](https://i.imgur.com/4nByJNh.png)
+
+### More Adlists
 
 #### Sus List
 ```
