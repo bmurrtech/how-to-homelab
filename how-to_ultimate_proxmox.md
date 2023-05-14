@@ -595,7 +595,7 @@ CD Drive > Guest Agent > Double-click `qemu-ga-x86_64` > Install
 > You should see an IP address in the VM > Summary tab after you restart it.
 
 # Pihole Proxmox Install
-
+- [Master DNS Block Lists](https://firebog.net/)
 - Create a new VM (ideally Ubuntu 20.04 cloudinit)
 - Access the VM console and run an update:
 
@@ -635,10 +635,21 @@ https://v.firebog.net/hosts/Easyprivacy.txt https://v.firebog.net/hosts/Prigent-
 https://raw.githubusercontent.com/DandelionSprout/adfilt/master/Alternate%20versions%20Anti-Malware%20List/AntiMalwareHosts.txt https://osint.digitalside.it/Threat-Intel/lists/latestdomains.txt https://s3.amazonaws.com/lists.disconnect.me/simple_malvertising.txt https://v.firebog.net/hosts/Prigent-Crypto.txt https://raw.githubusercontent.com/FadeMind/hosts.extras/master/add.Risk/hosts https://bitbucket.org/ethanr/dns-blacklists/raw/8575c9f96e5b4a1308f2f12394abd86d0927a4a0/bad_lists/Mandiant_APT1_Report_Appendix_D.txt https://phishing.army/download/phishing_army_blocklist_extended.txt https://gitlab.com/quidsup/notrack-blocklists/raw/master/notrack-malware.txt https://v.firebog.net/hosts/RPiList-Malware.txt https://v.firebog.net/hosts/RPiList-Phishing.txt https://raw.githubusercontent.com/Spam404/lists/master/main-blacklist.txt https://raw.githubusercontent.com/AssoEchap/stalkerware-indicators/master/generated/hosts https://urlhaus.abuse.ch/downloads/hostfile/ https://malware-filter.gitlab.io/malware-filter/phishing-filter-hosts.txt https://v.firebog.net/hosts/Prigent-Malware.txt
 ```
 
-#### Porn Block and More List
+#### Crypto Block List
 ```
-https://zerodot1.gitlab.io/CoinBlockerLists/hosts_browser https://raw.githubusercontent.com/chadmayfield/my-pihole-blocklists/master/lists/pi_blocklist_porn_top1m.list https://v.firebog.net/hosts/Prigent-Adult.txt https://raw.githubusercontent.com/anudeepND/blacklist/master/facebook.txt
+https://zerodot1.gitlab.io/CoinBlockerLists/hosts_browser
 ```
+
+#### Porn Block List
+```
+https://raw.githubusercontent.com/chadmayfield/my-pihole-blocklists/master/lists/pi_blocklist_porn_top1m.list https://v.firebog.net/hosts/Prigent-Adult.txt 
+```
+
+#### Facebook Block List
+```
+https://raw.githubusercontent.com/anudeepND/blacklist/master/facebook.txt
+```
+
 ### Whitelisting Common Services/Domains
 
 #### Quick, Easy, Auto-updated Whitelist Scripts
@@ -707,6 +718,39 @@ pihole -w -spclient.wg.spotify.com apresolve.spotify.com api-tv.spotify.com uplo
 ```
 pihole --white-regex (\.|^)twimg\.com$ (\.|^)reddit\.com$ (\.|^)redd\.it$ [a-z]\.thumbs\.redditmedia\.com
 ```
+
+### Unbound DNS
+- To bypass the Google DNS server resolvers completely and take privacy into your self-hosted control, you need `Unbound`.
+- Enter the following to install it:
+
+```
+sudo apt install -y unbound dnsutils
+```
+
+- We need to properly configure Pihole to accept the Unbound DNS. You can get this pre-made config file here:
+
+```
+sudo wget https://bartonbytes.com/pihote.txt -0 /etc/unbound/conf.d/pihole.conf
+```
+
+> Note: Check that the file path matches the command. Otherwise, you will need to customize the path to fit your environment. (i.e. /etc/unbound/conf.d/pihole.conf > /etc/unbound/__unboundconf.d__/pihole.conf
+
+- Now that the config file has been set, you can restart the Unbound services and check the status:
+
+```
+sudo systemctl restart unbound
+sudo systemctl status unbound
+sudo systemctl enable unbound
+```
+
+- Now that Unbound is installed, we need to tell PiHole to use this Unbound DNS resolver for all it's outbound traffic. Navigate to:
+
+```
+> Pihole Web UI > Settings > DNS (tab) > Uncheck current DNS servers
+```
+
+- After removing the current upstream DNS servers selected, you need to set your custom Unbound one as follows:
+  - In the Upstream DNS Servers `Custom 1 (IPv4)` field __enter `127.0.0.1#5533`, check the box, and hit Save__ (button).
 
 # TrueNAS Scale
 
