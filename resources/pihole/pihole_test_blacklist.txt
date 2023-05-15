@@ -8,6 +8,9 @@
 # Test Black list
 # ------------------------------------[FILTERS]-------------------------------------
 0.0.0.0 nytimes.com
+0.0.0.0 lf16-tiktok-web.ttwstatic.com
+0.0.0.0 lf16-tiktok-common.ttwstatic.com
+0.0.0.0 lf16-cdn-tos.tiktokcdn-us.com
 0.0.0.0 mcs.us.tiktokv.com
 0.0.0.0 p77-sign-va-lite.tiktokcdn.com
 0.0.0.0 starling.us.tiktokv.com
