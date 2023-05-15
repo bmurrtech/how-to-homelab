@@ -838,6 +838,19 @@ sudo systemctl enable unbound
 - After removing the current upstream DNS servers selected, you need to set your custom Unbound one as follows:
   - In the Upstream DNS Servers `Custom 1 (IPv4)` field __enter `127.0.0.1#5533`, check the box, and hit Save__ (button).
 
+### Pihole Troubleshooting
+
+- Error: __DNS resoluion is currently unavailable__
+  - Explaination: After implementing `Unbound` as my DNS resolver, I found that when trying to update the `Gravity` using `pihole -g` I get an error stating __DNS resoluion is currently unavailable__.
+  - Solution: __Edit your `/etc/resolv.conf`__ file and __re-run `pihole -g`__. See `reslove.conf` below:
+
+```
+nano /etc/resolv.conf
+# add/modify the following lines 
+nameserver 127.0.0.1
+nameserver 9.9.9.9
+```
+
 # TrueNAS Scale
 
 ### TrueNAS Scale Install in Proxmox
