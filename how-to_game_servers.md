@@ -25,15 +25,6 @@ echo "*hard nofile 100000" >> /etc/security/limits.conf
 ulimit -n 100000
 ```
 
-- __Create a new directory__ for Steam
-
-```
-cd /
-cd home
-sudo mkdir sfserver
-cd steam
-```
-
 - __Install Steam__:
 
 ```
