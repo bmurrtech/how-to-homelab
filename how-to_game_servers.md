@@ -5,6 +5,13 @@
 
 - __Allocate 12-16GB of RAM__ to a VM
 
+- __Ensure your user has admin priveledges__ to execute certain install commands below. Or log in as root and skip to __Install dependencies__ instead:
+
+```
+sudo -s
+usermod -aG sudo [username]
+```
+
 - __Install dependencies__:
 
 > Ensure you run commands as `root` or `admin` with proper permission level. Type `sudo -i` to switch to root user. Note: Some servers disable `root` by default, therefore, you need to give your user account root/admin permissions to run the commands required.
@@ -17,7 +24,7 @@ sudo apt update && apt -y upgrade
 sudo apt install lib32gcc1
 ```
 
-- __Configure settings__:
+- __Configure/optomize settings for a gameserver__:
 
 ```
 echo "fs.file-max=100000" >> /etc/sysctl.conf
@@ -141,11 +148,71 @@ CTRL + A,  K
 
 > If you get a `timeout error`, just wait for the server to finish creating.
 
-- To keep the server daemond running enter:
+### Satisfactory Server Start on Reboot
+In order to make the server start on boot automatically, you have to create a custom `systemd` service file. Systemd is the service management system installed for many Linux distributions. You can read more about the concepts of `systemd` [service files here](https://docs.linuxgsm.com/configuration/running-on-boot). Thankfully, the [SatisfactoryWiki already created the service file](https://satisfactory.fandom.com/wiki/Dedicated_servers/Running_as_a_Service) for gamers to implement. Here's how to do it:
+
+-__Create a new service file__ for Satisfactory:
 
 ```
-systemctl daemon-reload
+nano /etc/systemd/system/satisfactory.service
 ```
+
+- __Copy & paste__ the following contents into the new file:
+
+```
+[Unit]
+Description=Satisfactory dedicated server
+Wants=network-online.target
+After=syslog.target network.target nss-lookup.target network-online.target
+
+[Service]
+Environment="LD_LIBRARY_PATH=./linux64"
+ExecStartPre=/usr/games/steamcmd +force_install_dir "/home/steam/SatisfactoryDedicatedServer" +login anonymous +app_update 1690800 -beta experimental validate +quit
+ExecStart=/home/your_user/SatisfactoryDedicatedServer/FactoryServer.sh
+User=steam
+Group=steam
+StandardOutput=journal
+Restart=on-failure
+WorkingDirectory=/home/steam
+StandardOutput=append:/var/log/satisfactory.log
+StandardError=append:/var/log/satisfactory.err
+
+[Install]
+WantedBy=multi-user.target
+```
+
+> Note: If you changed the username or decided to run the non-experimental server, you will need to change this service file to reflect your customized configuration. See the [raw service file template from the SatisfactoryWiki for refrence.](https://satisfactory.fandom.com/wiki/Dedicated_servers/Running_as_a_Service)
+
+
+- After creating the service, you will need to execute a daemon-reload to load the new service into systemd. To keep the server running enter:
+
+```
+sudo systemctl daemon-reload
+```
+
+- To start and stop the Satisfactory server, enter the following to commands respectively:
+
+```
+sudo systemctl enable satisfactory
+sudo systemctl start satisfactory
+```
+
+- You can check the status with `sudo systemctl status satisfactory`. If configured correctly the output should look something like:
+
+```
+● satisfactory.service - Satisfactory dedicated server
+     Loaded: loaded (/etc/systemd/system/satisfactory.service; enabled; vendor preset: enabled)
+     Active: active (running) since Tue 2021-11-02 15:30:13 CET; 2min 21s ago
+   Main PID: 2529 (FactoryServer.s)
+      Tasks: 24 (limit: 7053)
+     Memory: 4.4G
+        CPU: 4min 5.965s
+     CGroup: /system.slice/satisfactory.service
+             ├─2529 /bin/sh /home/steam/SatisfactoryDedicatedServer/FactoryServer.sh
+             └─2536 /home/steam/SatisfactoryDedicatedServer/Engine/Binaries/Linux/UE4Server-Linux-Shipping FactoryGame
+```
+
+__FIN__
 
 # Ark: Survival Evolved
 [Ref video for ARK](https://www.youtube.com/watch?v=oPN08QKYGvg)
