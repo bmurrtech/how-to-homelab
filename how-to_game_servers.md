@@ -1,8 +1,10 @@
 # Satisfactory
+[Ref. video](https://www.youtube.com/watch?v=b4ZrXxJ_DcM)
 
 - __Create a VM__ running Ubuntu server (ideally cloud init 20.04)
 
 - __Allocate 12-16GB of RAM__ to a VM
+
 - __Install dependencies__:
 
 > Ensure you run commands as `root` or `admin` with proper permission level. Type `sudo -i` to switch to root user. Note: Some servers disable `root` by default, therefore, you need to give your user account root/admin permissions to run the commands required.
@@ -61,64 +63,53 @@ ln -s /usr/games/steamcmd steamcmd
 steamcmd +login anonymous +force_install_dir /home/steam/sfserver +app_update 1690800 -beta experimental validate +quit
 ```
 
-> `app_update 1690800 -beta experimental` is an interchangable string depending on what Steam gameserver you wish to install.
+> `app_update 1690800 -beta experimental` is an interchangable string depending on what Steam gameserver you wish to install. For example, you can install an Ark server by simple changing the string to: `steamcmd +login anonymous +force_install_dir /home/steam/__arkserver +app_update 376030__ +quit`
 
-- __Now `exit`__ the `steamcmd`
-
-- __Change the user back__ to an admin user (i.e. `root`) to check the firewall settings
+- __Wait for__ the __downloads and processes to complete__. Depending on the size of the download, it may take awhile, but you should see a message such as: _"Sucecss! App [number] fully installed."_
+- Once console indicates full completion of process __type: `exit`__.
+- __Change the user back__ to an admin user (i.e. `root`) to configure the firewall settings
 
 ```
 su - [admin_user]
-sudo ufw status
+ufw status
 ```
 
 - If the firewall settings return: `Status: inactive` then __enable it and open up the port__ as follows:
 
 ```
 sudo ufw allow 22
-sudo ufw enable -y
+sudo ufw enable
 sudo ufw status
 ```
 
-> The status should report port 22 as allowed.
+> The status should report port 22 as `ALLOW`.
 
-- __Open up the additional port__ as follows:
+- __Open up the additional port__ that is specific to __Satisfactory__ as follows:
 
 ```
 sudo ufw allow 15777
 ```
 
-- __Change the user back to `sfserver`__ and enter the password you set
+- __Change the user back to `steam`__ and enter the password you set:
 
 ```
-su - sfserver
+su steam
 ```
 
-- Now, navigate to:
+- Now, __navigate to__:
 
 ```
-screen -S server
-cd server/
+cd /home/steam/sfserver
 ls
 ```
 
-- __Find the bash file `FactoryServer.sh`__ or similar and run it:
+- Open an `screen` to run the server logs:
 
 ```
-./FactoryServer.sh
+screen -S sfserver
 ```
 
-- Now, __open you copy of the game__, and __navigate to "Server Manager"__ in the game.
-
-- You will be prompted to __enter your public IP address__ (for the local network, enter `localhost`) and the port # `15777`. Hit `Confrim`.
-
-- __Enter a name__ for your server, and __set an admin password__.
-- __Configure your server settings__ as you wish
-- __Click `Create Game`__ and __enter a unique session name__
-
-> If you get a `timeout error`, just wait for the server to finish creating.
-
-- On the Linux server screen, you can type `CTRL + A, D` to close out the screen.
+- On the Linux server screen, you can __type `CTRL + A, D`__ to _close out the screen_. See [more details about screen here](https://www.tecmint.com/screen-command-examples-to-manage-linux-terminals/).
 
 ```
 # to see running screens/servers
@@ -130,6 +121,94 @@ screen -r
 # to kill the server
 CTRL + A,  K
 ```
+
+- __Find the bash file `FactoryServer.sh`__ or similar and run it:
+
+```
+./FactoryServer.sh
+```
+
+> This will start the actual Satisfactory game server up for the first time.
+
+- Now, __open you copy of the game__, and __navigate to "Server Manager"__ in the game.
+
+- You will be prompted to __enter the local IP address of the machine running the server__ (check your router DHCP server IPs and set it to a static IP so it doesn't change in the future) and the port # `15777`. Hit `Confrim`.
+
+- __Enter a name__ for your server, and __set an admin password__.
+- __Create a new game__ from the Satisfactory Server GUI
+- __Configure your server settings__ as you wish
+- __Click `Create Game`__ and __enter a unique session name__
+
+> If you get a `timeout error`, just wait for the server to finish creating.
+
+- To keep the server daemond running enter:
+
+```
+systemctl daemon-reload
+```
+
+# Ark: Survival Evolved
+[Ref video for ARK](https://www.youtube.com/watch?v=oPN08QKYGvg)
+
+- Follow all prior steps to get `steamcmd` installed, but this time, __create a folder within `/home/steam/` called `ark`__ specifically for Ark.
+- Once you have created a new ARK directory, __run the fullowing__ `steamcmd` to install the ARK server:
+
+```
+steamcmd +login anonymous +force_install_dir /home/steam/__arkserver +app_update 376030__ +quit
+```
+
+- Now we need to add custom parameters to an `ark.service` file. Change to the admin user and __edit the file as follows__:
+
+```
+nano /etc/systemd/system/ark.service
+```
+
+- __Copy and paste__ the following into that `ark.service` file:
+
+
+```
+[Unit]
+Description=ARK Survival Evolved
+Wants=network-online.target
+After=syslog.target network.target nss-lookup.target network-online.target
+
+[Service]
+Type=simple
+Restart=on-failure
+RestartSec=5
+StartLimitInterval=60s
+StartLimitBurst=3
+User=steam
+Group=steam
+ExecStartPre=/home/steam/steamcmd +login anonymous +force_install_dir /home/steam/arkserver +app_update 376030 +quit
+ExecStart=/home/steam/arkserver/ShooterGame/Binaries/Linux/ShooterGameServer TheIsland?listen?SessionName=ArkServer -server -log -NoBattlEye
+ExecReload=/bin/kill -s HUP $MAINPID
+ExecStop=/bin/kill -s INT $MAINPID
+WorkingDirectory=/home/steam/arkserver/ShooterGame/Binaries/Linux
+LimitNOFILE=100000
+
+[Install]
+WantedBy=multi-user.target
+```
+
+> To be cross compatiable with the EPIC game launcher, add `-NoBattlEye` after `-log` on the `ExecStart` line (already included in the above configuration).
+
+- To ensure the server starts the ARK server on reboot, enter the following commands:
+
+```
+systemctl daemon-reload
+systemctl start ark
+systemctl status ark.service
+```
+
+- __Whitelist the following ports__ in the Ubuntu server:
+
+```
+sudo ufw 7777
+sudo ufw 27015
+```
+
+- Also, __don't forget to port forward `777` and `27015` on your router__.
 
 # Modded Minecraft
 This tutorial assumes you already have an Ubuntu instance ready to go and that you want to run a __1.12.2__ Minecraft Server which requires `Java 8`. If you want to run Minecraft 1.16, then you will need to install a different version of `Java` with the following command: `apt install default-jre`
