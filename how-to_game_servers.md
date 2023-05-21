@@ -100,7 +100,7 @@ sudo ufw allow 15777
 - __Change the user back to `steam`__ and enter the password you set:
 
 ```
-su steam
+su - steam
 ```
 
 - Now, __navigate to__:
@@ -110,11 +110,14 @@ cd /home/steam/sfserver
 ls
 ```
 
-- Open an `screen` to run the server logs:
+- __Find the bash file `FactoryServer.sh`__ or similar and run it:
 
 ```
 screen -S sfserver
+./FactoryServer.sh
 ```
+
+> This will start the actual Satisfactory game server up for the first time.
 
 - On the Linux server screen, you can __type `CTRL + A, D`__ to _close out the screen_. See [more details about screen here](https://www.tecmint.com/screen-command-examples-to-manage-linux-terminals/).
 
@@ -123,19 +126,13 @@ screen -S sfserver
 screen -ls
 
 # to bring the server screen back up
-screen -r
+screen -r [screen_name]
 
 # to kill the server
 CTRL + A,  K
 ```
 
-- __Find the bash file `FactoryServer.sh`__ or similar and run it:
-
-```
-./FactoryServer.sh
-```
-
-> This will start the actual Satisfactory game server up for the first time.
+### Joining the Satisfactory Server
 
 - Now, __open you copy of the game__, and __navigate to "Server Manager"__ in the game.
 
@@ -154,7 +151,7 @@ In order to make the server start on boot automatically, you have to create a cu
 -__Create a new service file__ for Satisfactory:
 
 ```
-nano /etc/systemd/system/satisfactory.service
+sudo nano /etc/systemd/system/satisfactory.service
 ```
 
 - __Copy & paste__ the following contents into the new file:
@@ -167,13 +164,13 @@ After=syslog.target network.target nss-lookup.target network-online.target
 
 [Service]
 Environment="LD_LIBRARY_PATH=./linux64"
-ExecStartPre=/usr/games/steamcmd +force_install_dir "/home/steam/SatisfactoryDedicatedServer" +login anonymous +app_update 1690800 -beta experimental validate +quit
-ExecStart=/home/your_user/SatisfactoryDedicatedServer/FactoryServer.sh
+ExecStartPre=/usr/games/steamcmd +force_install_dir "/home/steam/sfserver" +login anonymous +app_update 1690800 -beta experimental validate +quit
+ExecStart=/home/steam/sfserver/FactoryServer.sh
 User=steam
 Group=steam
 StandardOutput=journal
 Restart=on-failure
-WorkingDirectory=/home/steam
+WorkingDirectory=/home/steam/sfserver
 StandardOutput=append:/var/log/satisfactory.log
 StandardError=append:/var/log/satisfactory.err
 
@@ -190,14 +187,20 @@ WantedBy=multi-user.target
 sudo systemctl daemon-reload
 ```
 
-- To start and stop the Satisfactory server, enter the following to commands respectively:
+- To start the Satisfactory server, enter the following to commands:
 
 ```
 sudo systemctl enable satisfactory
 sudo systemctl start satisfactory
 ```
 
-- You can check the status with `sudo systemctl status satisfactory`. If configured correctly the output should look something like:
+- You can check the running status with:
+
+```
+sudo systemctl status satisfactory
+```
+
+- If configured correctly, the output should look something like:
 
 ```
 ● satisfactory.service - Satisfactory dedicated server
@@ -210,6 +213,29 @@ sudo systemctl start satisfactory
      CGroup: /system.slice/satisfactory.service
              ├─2529 /bin/sh /home/steam/SatisfactoryDedicatedServer/FactoryServer.sh
              └─2536 /home/steam/SatisfactoryDedicatedServer/Engine/Binaries/Linux/UE4Server-Linux-Shipping FactoryGame
+```
+
+- Once your server is up and running, you can create a `screen` and monitor the log in real-time with a `tail` command:
+
+```
+# monitor the log file
+screen -S serverlog
+tail -n3 -f /var/log/satisfactory.log
+# to close the screen
+CTRL + A, D
+
+# monitor the log file
+screen -S serverlog
+tail -n3 -f /var/log/satisfactory.err
+# to close the screen
+CTRL + A, D
+```
+
+- To stop/restart the server, enter:
+
+```
+sudo systemctl stop satisfactory
+sudo systemctl restart satisfactory
 ```
 
 __FIN__
@@ -260,12 +286,14 @@ WantedBy=multi-user.target
 
 > To be cross compatiable with the EPIC game launcher, add `-NoBattlEye` after `-log` on the `ExecStart` line (already included in the above configuration).
 
-- To ensure the server starts the ARK server on reboot, enter the following commands:
+- __Set the server password and admin server password__:
 
 ```
-systemctl daemon-reload
-systemctl start ark
-systemctl status ark.service
+sudo nano /home/steam/arkserver/ShooterGame/Saved/Config/LinuxServer/GameUserSettings.ini
+
+# add and modify these lines in the .ini file
+ServerPassword=YourServerPassword
+ServerAdminPassword=YourServerAdminPassword
 ```
 
 - __Whitelist the following ports__ in the Ubuntu server:
@@ -276,6 +304,18 @@ sudo ufw 27015
 ```
 
 - Also, __don't forget to port forward `777` and `27015` on your router__.
+
+- To ensure the VM starts the ARK server on reboot, enter the following commands:
+
+```
+systemctl daemon-reload
+systemctl start ark
+systemctl status ark.service
+
+# restart or stop the server
+systemctl restart ark
+systemctl stop ark
+```
 
 # Modded Minecraft
 This tutorial assumes you already have an Ubuntu instance ready to go and that you want to run a __1.12.2__ Minecraft Server which requires `Java 8`. If you want to run Minecraft 1.16, then you will need to install a different version of `Java` with the following command: `apt install default-jre`
