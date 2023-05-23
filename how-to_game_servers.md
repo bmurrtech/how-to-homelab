@@ -1,9 +1,9 @@
 # Satisfactory
 [Ref. video](https://www.youtube.com/watch?v=b4ZrXxJ_DcM)
 
-- __Create a VM__ running Ubuntu server (ideally cloud init 20.04)
+- __Create a VM__ running Ubuntu server. Ideally, clone a VM from a [cloud init 20.04 on Proxmox hypervisor](https://github.com/bmurrtech/how-to-homelab/blob/main/how-to_ultimate_proxmox.md)!
 
-- __Allocate 12-16GB of RAM__ to a VM
+- __Allocate 12-16GB of RAM__ to the VM
 
 - __Install dependencies as `root`__:
 
@@ -73,16 +73,18 @@ sudo apt-get install steamcmd
 su - steam
 ```
 
-- __Make a link to user and `steamcmd`__:
+- Choose your path 1) [Make the sever start automatically on boot](###automatically-start-satisfactory-server) or 2) [Start the server manually every time](###manually-start-satisfactory-server). See [paths below:
+
+### Automatically Start Satisfactory Server
+In order to make the server start on boot automatically, you have to create a custom `systemd` service file. Systemd is the service management system installed for many Linux distributions. You can read more about the concepts of `systemd` [service files here](https://docs.linuxgsm.com/configuration/running-on-boot). Thankfully, the [SatisfactoryWiki already created the service file](https://satisfactory.fandom.com/wiki/Dedicated_servers/Running_as_a_Service) for gamers to implement. Here's how to do it:
+
+- First, __login as an admin user__ (required for `sudo` to work when creating a `service.file`).
+- __Make a link__ from `/user/steam/steamcmd` to /home/steam/:
 
 ```
 ln -s /usr/games/steamcmd steamcmd
 ```
 
-### Satisfactory Server Start on Reboot
-In order to make the server start on boot automatically, you have to create a custom `systemd` service file. Systemd is the service management system installed for many Linux distributions. You can read more about the concepts of `systemd` [service files here](https://docs.linuxgsm.com/configuration/running-on-boot). Thankfully, the [SatisfactoryWiki already created the service file](https://satisfactory.fandom.com/wiki/Dedicated_servers/Running_as_a_Service) for gamers to implement. Here's how to do it:
-
-- First, __login as an admin user__ (required for `sudo` to work when creating a `service.file`).
 -__Create a new service file__ for Satisfactory:
 
 ```
@@ -185,7 +187,7 @@ tail -n3 -f /var/log/satisfactory.err
 
 > If you get a `timeout error`, just wait for the server to finish creating.
 
-### Alternative Satisfactory Server Install
+### Manually Start Satisfactory Server
 
 - __Invoke the `steamcmd` to install the Satisfactory server__ in this new `steam` user directory/folder as follows:
 
