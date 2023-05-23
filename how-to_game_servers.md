@@ -5,16 +5,9 @@
 
 - __Allocate 12-16GB of RAM__ to a VM
 
-- __Ensure your user has admin priveledges__ to execute certain install commands below. Or log in as root and skip to __Install dependencies__ instead:
+- __Install dependencies as `root`__:
 
-```
-sudo -s
-usermod -aG sudo [username]
-```
-
-- __Install dependencies__:
-
-> Ensure you run commands as `root` or `admin` with proper permission level. Type `sudo -i` to switch to root user. Note: Some servers disable `root` by default, therefore, you need to give your user account root/admin permissions to run the commands required.
+> Ensure you run commands as `root` or `admin` with proper permission level. Type `sudo -i` to switch to root user. Note: Some servers disable `root` by default, therefore, you need to give your user account root/admin permissions to run the commands required for a _64-bit machine_.
 
 ```
 sudo add-apt-repository multiverse
@@ -22,34 +15,6 @@ sudo apt install software-properties-common
 sudo dpkg --add-architecture i386
 sudo apt update && apt -y upgrade
 sudo apt install lib32gcc1
-```
-
-- __Configure/optomize settings for a gameserver__:
-
-```
-echo "fs.file-max=100000" >> /etc/sysctl.conf
-sysctl -p /etc/sysctl.conf
-echo "*soft nofile 100000" >> /etc/security/limits.conf
-echo "*hard nofile 100000" >> /etc/security/limits.conf
-ulimit -n 100000
-```
-
-- __Install Steam__:
-
-```
-sudo apt install steamcmd
-```
-
-- __Create a Steam user__ (must run as admin)
-
-```
-sudo useradd -m -s /bin/bash steam
-```
-
-- __Set/create a password__
-
-```
-sudo passwd steam
 ```
 
 - __Make a new directory for `sfserver`__ to live insdie:
@@ -76,6 +41,32 @@ sudo ufw status
 
 > The status should report port 22 as `ALLOW`.
 
+- __Create a Steam user__ (must run as admin)
+
+```
+sudo useradd -m -s /bin/bash steam
+```
+
+- __Set/create a password__
+
+```
+sudo passwd steam
+```
+
+```
+sudo -s
+usermod -aG sudo steam
+su - steam
+```
+
+- __Install `steamcmd`__:
+
+```
+sudo apt-get install steamcmd
+```
+
+> Learn more about `steamcmd` and how it functions from the [Steam developer Wiki](https://developer.valvesoftware.com/wiki/SteamCMD)
+
 - __Login as `steam` user__:
 
 ```
@@ -87,39 +78,6 @@ su - steam
 ```
 ln -s /usr/games/steamcmd steamcmd
 ```
-
-- __Invoke the `steamcmd` to install the Satisfactory server__ in this new `steam` user directory/folder as follows:
-
-```
-steamcmd +force_install_dir /home/steam/sfserver +login anonymous +app_update 1690800 -beta experimental validate +quit
-```
-
-> `app_update 1690800 -beta experimental` is an interchangable string depending on what Steam gameserver you wish to install. For example, you can install an Ark server by simple changing the string to: `steamcmd +login anonymous +force_install_dir /home/steam/__arkserver +app_update 376030__ +quit`
-
-- __Wait for__ the __downloads and processes to complete__. Depending on the size of the download, it may take awhile, but you should see a message such as: _"Sucecss! App '1690800' fully installed."_
-
-
-- We could start the server as-is right now (see below on how) __BUT if you want the Satisfactory server to start AUTOMATICALLY on boot__, then you'll want to follow the steps outlined in [the next section](###satisfactory-server-start-on-reboot):
-
-> ```
-> cd /home/steam/sfserver
-> ls
-> ```
-> - __Finding the bash file `FactoryServer.sh`__ or similar and run it:
-> ```
-> screen -S sfserver
-> ./FactoryServer.sh
-> ```
-> This will start the actual Satisfactory game server with logs inside a `screen`.
-> - On the Linux server screen, you can __type `CTRL + A, D`__ to _close out the screen_. See [more details about screen here](https://www.tecmint.com/screen-command-examples-to-manage-linux-terminals/).
-> ```
-> # to see running screens/servers
-> screen -ls
-> # to bring the server screen back up
-> screen -r [screen_name]
-> # to kill the server
-> CTRL + A,  K
-> ```
 
 ### Satisfactory Server Start on Reboot
 In order to make the server start on boot automatically, you have to create a custom `systemd` service file. Systemd is the service management system installed for many Linux distributions. You can read more about the concepts of `systemd` [service files here](https://docs.linuxgsm.com/configuration/running-on-boot). Thankfully, the [SatisfactoryWiki already created the service file](https://satisfactory.fandom.com/wiki/Dedicated_servers/Running_as_a_Service) for gamers to implement. Here's how to do it:
@@ -141,14 +99,14 @@ After=syslog.target network.target nss-lookup.target network-online.target
 
 [Service]
 Environment="LD_LIBRARY_PATH=./linux64"
+ExecStartPre=/home/steam/steamcmd +force_install_dir "/home/steam/sfserver" +login anonymous +app_update 1690800 validate +quit
 ExecStart=/home/steam/sfserver/FactoryServer.sh
 User=steam
 Group=steam
-StandardOutput=journal
-Restart=on-failure
-WorkingDirectory=/home/steam/sfserver
 StandardOutput=append:/var/log/satisfactory.log
 StandardError=append:/var/log/satisfactory.err
+Restart=on-failure
+WorkingDirectory=/home/steam/sfserver
 TimeoutSec=240
 
 [Install]
@@ -164,7 +122,7 @@ CTRL + X, Y, ENTER
 > Note: If you changed the username or decided to run the non-experimental server, you will need to change this service file to reflect your customized configuration. See the [raw service file template from the SatisfactoryWiki for refrence.](https://satisfactory.fandom.com/wiki/Dedicated_servers/Running_as_a_Service)
 
 
-- After creating the service, you will need to __execute a daemon-reload__ to load the new service into systemd. To keep the server running enter:
+- After creating the service, you will need to __execute a daemon-reload__ to load the new `service.file` into systemd. To keep the server running enter:
 
 ```
 sudo systemctl daemon-reload
@@ -173,14 +131,13 @@ sudo systemctl daemon-reload
 - To __start the Satisfactory server__, enter the following to commands:
 
 ```
-sudo systemctl enable satisfactory
 sudo systemctl start satisfactory
 ```
 
 - You can __check the running status__ with:
 
 ```
-sudo systemctl status satisfactory
+sudo systemctl status satisfactory.service
 ```
 
 - If configured correctly, the output should look something like:
@@ -209,16 +166,10 @@ sudo systemctl restart satisfactory
 
 ```
 # monitor the log file
-screen -S serverlog
 tail -n3 -f /var/log/satisfactory.log
-# to close the screen
-CTRL + A, D
 
 # monitor the log file
-screen -S serverlog
 tail -n3 -f /var/log/satisfactory.err
-# to close the screen
-CTRL + A, D
 ```
 
 ### Joining the Satisfactory Server for the First Time
@@ -234,11 +185,64 @@ CTRL + A, D
 
 > If you get a `timeout error`, just wait for the server to finish creating.
 
+### Alternative Satisfactory Server Install
+
+- __Invoke the `steamcmd` to install the Satisfactory server__ in this new `steam` user directory/folder as follows:
+
+```
+steamcmd
+force_install_dir /home/steam/sfserver/
+login anonymous
+app_update 1690800 -validate
+```
+
+> You can also run it as one line:
+> ```
+> steamcmd +force_install_dir /home/steam/sfserver/ +login anonymous +app_update 1690800 validate +quit
+> ```
+> Change the line after `+login anonymous` to `+app_update 1690800 -beta experimental +quit` if you want to install the experimental gamer server version.
+
+- __Wait for__ the __downloads and processes to complete__. Depending on the size of the download, it may take awhile, but you should see a message such as: _"Sucecss! App '1690800' fully installed."_
+
+
+- We could start the server as-is, right now (see below on how) __BUT if you want the Satisfactory server to start AUTOMATICALLY on boot__, then you'll want to follow the steps outlined in [this section](###satisfactory-server-start-on-reboot):
+
+> ```
+> cd /home/steam/sfserver
+> ls
+> ```
+> - __Finding the bash file `FactoryServer.sh`__ or similar and run it:
+> ```
+> screen -S sfserver
+> cd sfserver
+> ./FactoryServer.sh
+> ```
+> This will start the actual Satisfactory game server with logs inside a `screen`.
+> - On the Linux server screen, you can __type `CTRL + A, D`__ to _close out the screen_. See [more details about screen here](https://www.tecmint.com/screen-command-examples-to-manage-linux-terminals/).
+> ```
+> # to see running screens/servers
+> screen -ls
+> # to bring the server screen back up
+> screen -r [screen_name]
+> # to kill the server
+> CTRL + A,  K
+> ```
 
 __FIN__
 
+
 # Ark: Survival Evolved
 [Ref video for ARK](https://www.youtube.com/watch?v=oPN08QKYGvg)
+
+- __Configure/optomize settings for the Ark gameserver__:
+
+```
+echo "fs.file-max=100000" >> /etc/sysctl.conf
+sysctl -p /etc/sysctl.conf
+echo "*soft nofile 100000" >> /etc/security/limits.conf
+echo "*hard nofile 100000" >> /etc/security/limits.conf
+ulimit -n 100000
+```
 
 - Follow all prior steps to get `steamcmd` installed, but this time, __create a folder within `/home/steam/` called `ark`__ specifically for Ark.
 - Once you have created a new ARK directory, __run the fullowing__ `steamcmd` to install the ARK server:
@@ -270,7 +274,7 @@ StartLimitInterval=60s
 StartLimitBurst=3
 User=steam
 Group=steam
-ExecStartPre=/home/steam/steamcmd +login anonymous +force_install_dir /home/steam/arkserver +app_update 376030 +quit
+ExecStartPre=/home/steam/steamcmd +force_install_dir /home/steam/arkserver +login anonymous +app_update 376030 +quit
 ExecStart=/home/steam/arkserver/ShooterGame/Binaries/Linux/ShooterGameServer TheIsland?listen?SessionName=ArkServer -server -log -NoBattlEye
 ExecReload=/bin/kill -s HUP $MAINPID
 ExecStop=/bin/kill -s INT $MAINPID
