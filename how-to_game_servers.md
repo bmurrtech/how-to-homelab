@@ -73,7 +73,7 @@ sudo apt-get install steamcmd
 su - steam
 ```
 
-- Choose your path 1) [Make the sever start automatically on boot](###automatically-start-satisfactory-server) or 2) [Start the server manually every time](###manually-start-satisfactory-server). See [paths below:
+- Choose your path 1) [Make the sever start automatically on boot](#automatically-start-satisfactory-server) or 2) [Start the server manually every time](#manually-start-satisfactory-server). See paths below:
 
 ### Automatically Start Satisfactory Server
 In order to make the server start on boot automatically, you have to create a custom `systemd` service file. Systemd is the service management system installed for many Linux distributions. You can read more about the concepts of `systemd` [service files here](https://docs.linuxgsm.com/configuration/running-on-boot). Thankfully, the [SatisfactoryWiki already created the service file](https://satisfactory.fandom.com/wiki/Dedicated_servers/Running_as_a_Service) for gamers to implement. Here's how to do it:
