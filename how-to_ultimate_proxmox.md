@@ -926,8 +926,28 @@ sudo docker volume create portainer_data
 
 sudo docker run -d -p 8000:8000 -p 9443:9443 --name portainer --restart=always -v /var/run/docker.sock:/var/run/docker.sock -v portainer_data:/data portainer/portainer-ce:latest
 ```
-- To access the Portainer web UI, enter the IP address of the VM you created https://x.x.x.x:9443
-- Done.
+- Configure your firewall via `UFW` to access the Portainer web UI:
+
+```
+sudo apt install ufw
+sudo ufw allow 9443/tcp
+sudo ufw allow 8000/tcp
+sudo ufw enable
+sudo ufw status
+```
+
+> You can check [Portainer's port configurations doc for Kubernetes](https://docs.portainer.io/start/requirements-and-prerequisites) to double-check.
+
+- To access the Portainer web UI, enter the IP address of the VM (or the public IP of your VPS) you created https://x.x.x.x:9443
+- Usefull Portainer Commands:
+
+```
+# if you get a timeout error, restart Portainer:
+sudo docker restart portainer
+
+# check Portainer status
+docker ps
+```
 
 
 # Plex
