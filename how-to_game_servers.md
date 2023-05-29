@@ -7,10 +7,53 @@ There are multiple dependencies required by Pterodactly, from Let's Encrypt to a
 
 #### Automated Pterodactyl Install Method
 
+__Resources__:
 - See the __unofficial__ Pterodactyl script by vilhelmprytz on his: [Github](https://github.com/pterodactyl-installer/pterodactyl-installer)
 - And watch [SoulStriker's tutorial video](https://www.youtube.com/watch?v=E2hEork-DYc) on how to use vilhelmprytz installer script.
 
 > Disclaimer: I have not verified if this `bash` script is malicious or not. Nor have I checked the Pterodactl code. If you are concerned about potential malware or boot/root-kits, exercise zero trust and read through source code line by line to verify nothing is malicous. If this is not worth it, you have to make a choice between convenience and manually installing Pterodactyl yourself.
+
+__Start of My Guide__
+- For starters, I'm installing Portainer as my Docker container manager. Open a new tab and [follow my Portainer install guide here](https://github.com/bmurrtech/how-to-homelab/blob/main/how-to_ultimate_proxmox.md#portainer) and come back to this guide.
+- With Portainer installed, login and navigate to:
+
+```
+Local > Home > App Templates > Select Ubuntu from list
+```
+
+- Name the container __Pterodactyl__ and set the Network to __bridge__.
+- Grant access conrol to __administrators__
+- Click "Deploy the container" button (you should see a "running" status).
+- Now, access the __console__ of the new container:
+
+```
+Containers > Click Name of Container > Console > Connect (as root)
+```
+
+![port_console](https://i.imgur.com/DBiQF3w.png)
+
+- As root, you don't have to use `sudo`, but we want to update and install `curl` in the container first:
+
+```
+apt update && apt upgrade -y
+apt install curl
+```
+
+- Next, run the `bash` install script from vilhelmprytz:
+
+```
+bash <(curl -s https://pterodactyl-installer.se)
+```
+
+- Choose to install both the __panel__ and __wings__ by entering __2__.
+- Enter two separate, preferred usernames and passwords for both the panel access and the admin account (this will be used to access the Pterodactyl web UI in a moment).
+- Enter you time zone (ex. `America/Chicago`, `America/New_york")
+- Enter your FQDN
+
+> If you don't know what an FQDN is, use your server's public IP address or create `A` name records pointing to your server's public IP address (ex. Type: A, Name: panel, Conent: [serverIP], Proxy status: DNS only/off, TTL: 1min).
+
+__WIP__
+
 
 #### Manual Pterodactyl Install Method
 
