@@ -52,16 +52,15 @@ sudo apt install fail2ban -y
 - If you always want to automatically get the latest version of Docker on Ubuntu, you must add its official repository to Ubuntu system. To do that, run the commands below to install prerequisite packages:
 
 ```
-sudo apt update
+sudo apt update -y && apt upgrade -y
 
 sudo apt-get install apt-transport-https ca-certificates curl gnupg-agent software-properties-common
-
 ```
 
 - Next, run the commands below to download and install Docker’s official GPG key. The key is used to validate packages installed from Docker’s repository making sure they’re trusted.
 
 ```
-curl -fsSL https://download.docker.com/linux/ubuntu/gpg | sudo apt-key add -
+sudo curl -fsSL https://download.docker.com/linux/ubuntu/gpg | sudo apt-key add -
 
 sudo apt-key fingerprint 0EBFCD88
 ```
@@ -87,9 +86,8 @@ sudo add-apt-repository "deb [arch=amd64] https://download.docker.com/linux/ubun
 
 - The command below will always install the highest possible Docker version:
 
-
 ```
-sudo apt-get install docker-ce docker-ce-cli containerd.io
+curl -sSL https://get.docker.com/ | CHANNEL=stable sh
 ```
 
 - Reboot your instance:
@@ -120,14 +118,15 @@ to your terminal.
 ```
 
 ### Install Docker Compose 
+> If you wanted to install a specific version of `docker-compose` then follow the steps below. Otherwise skip to the next section.
 
-- Install __>v2__ `docker-compose` (mailcow requires v2 and newer). Please [refer to the official Docker Github for latest releases](https://github.com/docker/compose/releases) and change the `<DESIRED_VER>` version number below to match what you choose:
+- To install a custom version of `docker-compose` (mailcow requires v2 and newer). Please [refer to the official Docker Github for latest releases](https://github.com/docker/compose/releases) and change the `<DESIRED_VER>` version number below to match what you choose:
 
 ```
 sudo curl -L "https://github.com/docker/compose/releases/download/<DESIRED_VER>/docker-compose-$(uname -s)-$(uname -m)" -o /usr/local/bin/docker-compose
 
 # for example:
-sudo curl -L "https://github.com/docker/compose/releases/download/2.18.1/docker-compose-$(uname -s)-$(uname -m)" -o /usr/local/bin/docker-compose
+sudo curl -L "https://github.com/docker/compose/releases/download/v2.18.1/docker-compose-$(uname -s)-$(uname -m)" -o /usr/local/bin/docker-compose
 ```
 
 - After downloading it, run the commands below to apply executable permissions to the binary file and create a symbolic link to `/usr/binary`:
@@ -138,22 +137,14 @@ sudo chmod +x /usr/local/bin/docker-compose
 sudo ln -s /usr/local/bin/docker-compose /usr/bin/docker-compose
 ```
 
-> Alternative `docker-compose` install as instructed by mailcow:
-> ```
-> LATEST=$(curl -Ls -w %{url_effective} -o /dev/null https://github.com/docker/compose/releases/latest) &&
-> LATEST=${LATEST##*/} && curl -L https://github.com/docker/compose/releases/download/$LATEST/docker-compose-$(uname 
-> s)-$(uname -m) > /usr/local/bin/docker-compose
-> chmod +x /usr/local/bin/docker-compose
-> ```
-
 - Now, Docker Compose should work. To test it, we will run the command below:
 
 ```
-docker-compose --version
+sudo docker-compose --version
 
 # the response should read something like:
 Response:
-docker-compose version 1.24.0, build 0aa59064
+docker-compose version v2.18.1
 ```
 
 ### Install Portainer
@@ -163,25 +154,37 @@ docker-compose version 1.24.0, build 0aa59064
 
 ```
 cd ~/
-docker volume create portainer_data
-docker run -d -p 8000:8000 -p 9000:9000 --name=portainer --restart=always -v /var/run/docker.sock:/var/run/docker.sock -v portainer_data:/data portainer/portainer
+sudo docker volume create portainer_data
+sudo docker run -d -p 8000:8000 -p 9443:9443 --name portainer --restart=always -v /var/run/docker.sock:/var/run/docker.sock -v portainer_data:/data portainer/portainer-ce:latest
 ```
 
 > Note: the `-v /var/run/docker.sock:/var/run/docker.sock` option can be used in Linux environments only.
 
-- At this point, all you need to do is access Portainer portal to manage Docker. Open your web browser and browse to the server’s hostname or IP address followed by port #9000
+- At this point, all you need to do is access Portainer portal to manage Docker. Open your web browser and browse to the server’s hostname or IP address followed by port #9443
 
 ```
-http://<SERVER_IP>:9000
+https://<SERVER_IP>:9443
 ```
 
 - You should get Portainer login page to create an admin password.
 - Submit a new password (make it a good one as this is publically accessible if hosted on a VPS).
-- Select __Local__ as the type of envirnoment you want to manage.
+- Select __Local__ as the type of envirnoment you want to manage (if unavailalbe, select "Getting Started").
 - Since we installed Docker on the same machine, select to connect and manage Docker locally.
 
-### Install Mailcow Email Server
+#### Install mailcow with Portainer
+Installing mailcow with Portainer is probably the easiest method as it is a simple copy and paste of the `git` link or `docker-compose.yml` file (see end of guide for full `.yml` file contents).
 
+![port_create_mailcow](https://i.imgur.com/GKBB2m6.png)
+
+- Copy and paste the following (see screenshot for example):
+
+```
+https://github.com/mailcow/mailcow-dockerized
+```
+
+- Click "Deploy Stack" (button)
+
+#### Install mailcow without Portainer
 - Make sure your `umask` equals `0022` __before__ you clone the `Mailcow` git.
 
 ```
