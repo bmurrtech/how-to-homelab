@@ -1,6 +1,9 @@
 
 # How-to Email Server
 
+![compatible_OS](https://i.imgur.com/uvdqtOs.png)
+- [Read through the mailcow documentation](https://docs.mailcow.email/prerequisite/prerequisite-system/#minimum-system-resources) to ensure you meet minimum requirements.
+
 ### Step 1 Get a VPS
 
 > Self-hosting is not ideal for running an email server b/c 1) you need to manage reverse DNS 2) you need a dedicated, static IP. If you have these for your homelab, go for it.
@@ -9,7 +12,7 @@ __Minimum Email Server Specs for 1 Email User__
 
 | vCPU        | RAM         | HHD/SSD     |
 | ----------- | ----------- | ----------- |
-| 2 vCPU      | 4GB         | 20GB
+| 1GHz        | 6GB         | 20GB
 
 - [A2 Hosting](https://www.a2hosting.com/vps-hosting/managed?aid=presearchnode&bid=3b8941fc) offers an __unmanaged__ VPS (cheaper than managed) that would work great.
 - Alternatively, if you're lucky and there's resources available in your nearest Oracle datatcenter, you can [create a free cloud account with Oracle](https://www.oracle.com/cloud/sign-in.html) (get a free 4 ARM-based CPUs, 28GB RAM, w/50GB of block storage for free!).
@@ -187,6 +190,8 @@ sudo docker-compose ps
 
 #### VPS Firewall Config
 - Every VPS provider may be a little different, but you need to find the firewall/security, port, ingress/egress settings and configure them. I am working in [Oracle Cloud's ingress rules](https://docs.oracle.com/en-us/iaas/developer-tutorials/tutorials/apache-on-ubuntu/01oci-ubuntu-apache-summary.htm), so this tutorial assumes as much.
+
+![mailcow_ports](https://i.imgur.com/9qiTMcr.png)
 - Add ingress rules for `22, 25, 80, 110, 443, 465, 587, 993, 995, 4190/tcp` ports. Follow the template configuration below when configuring your ingress rules:
 
 ```
