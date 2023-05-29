@@ -48,9 +48,27 @@ bash <(curl -s https://pterodactyl-installer.se)
 - Choose to install both the __panel__ and __wings__ by entering __2__.
 - Enter two separate, preferred usernames and passwords for both the panel access and the admin account (this will be used to access the Pterodactyl web UI in a moment).
 - Enter you time zone (ex. `America/Chicago`, `America/New_york")
-- Enter your FQDN
+- Enter your FQDN for the panel.
 
 > If you don't know what an FQDN is, use your server's public IP address or create `A` name records pointing to your server's public IP address (ex. Type: A, Name: panel, Conent: [serverIP], Proxy status: DNS only/off, TTL: 1min).
+
+- Agree with `y` to all the prompts (i.e. ufw, MySQL, auto config user, etc.) with `y` to continue with the installation.
+- Agree to install wings and all the automatic configurations (i.e. UFW, MySQL, database hosts, etc.).
+- Ener the panel address (same as the FQDN you enter previously).
+- Agree to allow traffic on port `3306`.
+
+> Note: You must ensure that port `3306` and `2022` is open on your router or VPS firewall, too!
+
+- You will be prompted to make a username and password for the pterodactyl database, also.
+
+__Troubleshooting__
+- If you get a response stating that the "host is down" something went wrong. Try restarting the container and enter the following to test:
+
+```
+sytemctl lsit-units --type=service
+```
+
+- Research the required ports to run Pterodactyl and ensure that the Portainer Dockerized netowrk is publishing those necessary ports for panel web UI access.
 
 __WIP__
 
