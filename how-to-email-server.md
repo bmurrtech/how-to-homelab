@@ -163,7 +163,7 @@ sudo nano mailcow.conf
 
 ```
 LATEST=$(curl -Ls -w %{url_effective} -o /dev/null https://github.com/docker/compose/releases/latest) && LATEST=${LATEST##*/} && curl -L https://github.com/docker/compose/releases/download/$LATEST/docker-compose-$(uname -s)-$(uname -m) > /usr/local/bin/docker-compose
-chmod +x /usr/local/bin/docker-compose
+sudo chmod +x /usr/local/bin/docker-compose
 ```
 
 - Now, apply the changes made and start the mail server:
@@ -181,41 +181,132 @@ sudo docker-compose ps
 ```
 
 - You should notice an "Up" text maker in the `STATUS` column.
-- If all looks good, run a `telnet` to check if port `25` is open and listening:
+- If all looks good, time to configure the firewall rules.
+- 
+### Step 5 Configure Firewall Rules
 
-```
-telnet 127.0.0.1 25
-```
-
-- If it returns a `Connection refused`, then we know the firewall or VPS network is blocking it. In which case, we need to update the firewall rules as follows:
-
-```
-sudo ufw default allow outgoing
-sudo ufw allow 22, 25, 80, 110, 443, 465, 587, 993, 995, 4190/tcp
-```
-
-> If you get an `ERROR: Need 'to' or 'from' clause` response, you will need to enter each port one by one as follows `ufw allow 22/tcp`, `ufw allow 25/tcp`, etc.
-
-- If you still have connection issues when running `telnet 127.0.0.1 25`, then you likely have to add more _ingress rules_ in your VPS server settings.
-- To confirm this suspicion further, run `netstat -tulpen` and see what ports are open. If you the ports listed match the ingress ports you added, then we have a good clue for the next actions.
+#### VPS Firewall Config
+- Every VPS provider may be a little different, but you need to find the firewall/security, port, ingress/egress settings and configure them. I am working in [Oracle Cloud's ingress rules](https://docs.oracle.com/en-us/iaas/developer-tutorials/tutorials/apache-on-ubuntu/01oci-ubuntu-apache-summary.htm), so this tutorial assumes as much.
 - Add ingress rules for `22, 25, 80, 110, 443, 465, 587, 993, 995, 4190/tcp` ports. Follow the template configuration below when configuring your ingress rules:
 
 ```
-# Mailcow ingress rule
+# Mailcow ingress/egress rule
+Stateless: Checked
 Source CIDR: 0.0.0.0/0
 IP Protocol: TCP
-Sorce Port Range: All
+Sorce Port Range: All (leave blank)
+Destination Port Range: 22
+Description: Mailcow
+
+# Mailcow ingress rule 
+Stateless: Checked/egress
+Source CIDR: 0.0.0.0/0
+IP Protocol: TCP
+Sorce Port Range: All (leave blank)
 Destination Port Range: 25
 Description: Mailcow
+
+# continue to add ingress rules for every port listed above
 ```
 
-- After adding all the ingress rules, restart docker and check the open ports:
+#### Docker Firewall Config
+Turns out that Docker firewall settings are difficult. ["One of the most annoying things with Docker has been how it interacts with iptables. And ufw. And firewalld."](https://unrouted.io/2017/08/15/docker-firewall/) But, thanks to a recent Docker 17.06 update and higher, ["you can add rules to a new table called `DOCKER-USER`. This can be useful if you need to pre-populate iptables rules that need to be in place before Docker runs."](https://docs.docker.com/engine/userguide/networking/#links)
+- To demonstrate the port issues of Docker before configuration, run a `telnet` to check if port `25` is open and listening:
 
 ```
-sudo systemctl restart docker
-netstat -tulpen
 telnet 127.0.0.1 25
 ```
+
+- If it returns a `Connection refused`, then we know the Docker firewall is still blocking it. In which case, we need to update the firewall rules.
+- First, create a new `iptables.conf`
+
+```
+nano /etc/iptables.conf
+```
+
+- Next, copy and paste the following contents into that file and save it:
+
+```
+*filter
+:INPUT ACCEPT [0:0]
+:FORWARD DROP [0:0]
+:OUTPUT ACCEPT [0:0]
+:FILTERS - [0:0]
+:DOCKER-USER - [0:0]
+
+-F INPUT
+-F DOCKER-USER
+-F FILTERS
+
+-A INPUT -i lo -j ACCEPT
+-A INPUT -p icmp --icmp-type any -j ACCEPT
+-A INPUT -j FILTERS
+
+-A DOCKER-USER -i ens33 -j FILTERS
+-A FILTERS -m state --state ESTABLISHED,RELATED -j ACCEPT
+-A FILTERS -m state --state NEW -s 1.2.3.4/32 -j ACCEPT
+-A FILTERS -m state --state NEW -m tcp -p tcp --dport 22 -j ACCEPT
+-A FILTERS -m state --state NEW -m tcp -p tcp --dport 25 -j ACCEPT
+-A FILTERS -m state --state NEW -m tcp -p tcp --dport 80 -j ACCEPT
+-A FILTERS -m state --state NEW -m tcp -p tcp --dport 110 -j ACCEPT
+-A FILTERS -m state --state NEW -m tcp -p tcp --dport 443 -j ACCEPT
+-A FILTERS -m state --state NEW -m tcp -p tcp --dport 465 -j ACCEPT
+-A FILTERS -m state --state NEW -m tcp -p tcp --dport 587 -j ACCEPT
+-A FILTERS -m state --state NEW -m tcp -p tcp --dport 993 -j ACCEPT
+-A FILTERS -m state --state NEW -m tcp -p tcp --dport 995 -j ACCEPT
+-A FILTERS -m state --state NEW -m tcp -p tcp --dport 4190 -j ACCEPT
+-A FILTERS -j REJECT --reject-with icmp-host-prohibited
+
+COMMIT
+```
+
+- Now, load this config into the kernel with:
+
+```
+sudo iptables-restore -n /etc/iptables.conf
+```
+
+> "That `-n` flag is crucial to avoid breaking Docker. This firewall avoids touching areas Docker is likely to interfere with. You can restart Docker over and over again and it will not harm or hinder our rules in `INPUT`, `DOCKER-USER` or `FILTERS`."
+
+- And start the firewall at boot by creating a new `systemd.service` file:
+
+```
+# creates the file
+sudo nano /etc/systemd/system/iptables.service
+
+# contents to be added to file
+[Unit]
+Description=Restore iptables firewall rules
+Before=network-pre.target
+
+[Service]
+Type=oneshot
+ExecStart=/sbin/iptables-restore -n /etc/iptables.conf
+
+[Install]
+WantedBy=multi-user.target
+
+# now, enable it to start at boot
+sudo systemctl enable --now iptables
+
+# if the above failes to start it, try:
+sudo systemctl enable iptables
+sudo systemctl start iptables
+```
+
+- To make changes, open the firewall settings in your favourite text editor, add or remove a rule from the `FILTERS` section, then reload the firewall with:
+
+```
+# open firewall settings
+sudo nano /etc/iptables.conf
+
+# save changes then update with:
+sudo systemctl restart iptables
+```
+
+__Troubleshooting__
+- To confirm this suspicion further, run `netstat -tulpen` and `telnet 127.0.0.1 25` and see what ports are open. If you the ports are still returning "Connection refused" dig deeper into your `iptables`, VPS ingress/network port settings, and check Portainer > Local > Networks for anything that looks off.
+
 
 #### Protainer x Ngix x Mailcow
 If you wish to run `Nginx`, then you will need to make special configurations. We have to create a number of custom files to make Portainer and Mailcow play nicely together.
@@ -306,3 +397,14 @@ sudo docker-compose up -d && docker-compose restart nginx-mailcow
 
 > Note: The nginx-mailcow restart seems to always produce the following error: `
 ERROR: Invalid interpolation format for "environment" option in service "postfix-mailcow": "REDIS_SLAVEOF_IP=${REDIS_SLAVEOF_IP:-}"`
+
+### Resources
+- [Opentaq! - SELF-HOSTED | Set up and run your own Mailserver with Mailcow | DNS, Security, Installation, Test](https://www.youtube.com/watch?v=_z6do5BSJmg&t=287s)
+- [Install a mail server on Linux in 10 minutes - docker, docker-compose, mailcow
+](https://www.youtube.com/watch?v=4rzc0hWRSPg)
+- [Portainer Install Ubuntu tutorial - manage your docker containers
+](https://www.youtube.com/watch?v=ljDI5jykjE8)
+- [Mailcow Docker Compose](https://docs.mailcow.email/i_u_m/i_u_m_install/)
+- [Mailcow Nginx Configurations](https://docs.mailcow.email/third_party/portainer/third_party-portainer/)
+- [Opening port 80 on Oracle Cloud Infrastructure Compute](https://stackoverflow.com/questions/54794217/opening-port-80-on-oracle-cloud-infrastructure-compute-node)
+- [See 3 "Enable Internet Access" section of Oracle Cloud doc](https://docs.oracle.com/en-us/iaas/developer-tutorials/tutorials/apache-on-ubuntu/01oci-ubuntu-apache-summary.htm)
