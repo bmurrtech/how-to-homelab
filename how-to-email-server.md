@@ -44,4 +44,265 @@ sudo apt update -y && apt upgrade -y
 sudo apt install fail2ban -y
 ```
 
-- Install `UFW` (Uncomplicated Firewall) to prevent unwanted traffic from accessing your server.
+### Step 3 Install Portainer
+
+> This step is optional, but Portainer is a great tool for creating other docker containers for other services (such as a Wireguard VPN, Unbound DNS server and much more), so I made it a part of this email server tutorial.
+
+- I've written a [Portainer install guide](https://github.com/bmurrtech/how-to-homelab/blob/main/how-to_ultimate_proxmox.md#portainer). <-- Open that link in a new tab, follow the guide to install Portainer on your VPS, then come back here.
+
+- Most VPS providers will lock down your network and ports to prevent unautorized access. Therefore, you must check your provider's documentatio on how to edit the ingress rules to allow traffic on ports `8000` and `9443`. For Oracle Cloud, navigate to:
+
+```
+Networking > Vitrual could networks > [your_network] > Ingress Rules > Add Ingress Rules
+```
+
+- Enter the following parameters to your ingress rules:
+
+```
+# Portainer ingress rule 1
+Source CIDR: 0.0.0.0/0
+IP Protocol: TCP
+Sorce Port Range: All
+Destination Port Range: 8000
+Description: Portainer 8000/tcp
+
+# Portainer ingress rule 2
+Source CIDR: 0.0.0.0/0
+IP Protocol: TCP
+Sorce Port Range: All
+Destination Port Range: 9443
+Description: Portainer 9443/tcp
+```
+
+- Now, we need to open these same ports on your VPS server instance:
+  - Install `UFW` (Uncomplicated Firewall) and run the following commands:
+
+```
+sudo apt install ufw
+sudo ufw allow 9443/tcp
+sudo ufw allow 8000/tcp
+sudo ufw enable
+sudo ufw status
+```
+
+- Restart your Portainer docker by running:
+
+```
+# if you get a timeout error, restart Portainer:
+sudo docker restart portainer
+
+# check Portainer status
+docker ps
+
+# update docker compose plugin
+sudo apt install docker-compose-plugin
+```
+
+- Now, try to access the Portainer web UI by typing the following in your web browser:
+
+```
+https://[your_VPS_IP_address]:9443
+```
+
+> Note: You _must_ use the secure __https://__ protocol to access the Portainer web UI. If you get a warning, ignore it and proceed (by default Portainer doesn't use SSL, and this is expected behavior). If you still cannot access your Portainer, you may need to check that your `UFW` firewall and VPS ingress rules are properly configured before continuing.
+
+- If all goes well, you should see a Portainer login screen where you will set the admin user and password (_make it a good password_ as this is accessible to anyone on the internet by default!).
+- Check if docker has SELinux support enabled:
+
+```
+sudo docker info | grep selinux
+```
+
+- If the above command returns an empty or no output, see notes below. Otherwise, skip it.
+ 
+> Create or edit `/etc/docker/daemon.json` and add:
+> ```
+> {
+> "selinux-enabled": true
+> }
+> ```
+> - Then, you'll need to restart the Docker `daemon`:
+> ```
+> sudo systemctl restart docker
+> ```
+> - Refresh your Portainer web UI (and re-login if necessary)
+
+### Step 4 Install Mailcow Email Server
+
+- Make sure your `umask` equals `0022` __before__ you clone the `Mailcow` git.
+
+```
+umask
+0022 # <-- Verify it is 0022
+
+# if it returns 0002, then change to root by running:
+sudo -s
+umask
+0022 # <-- Verify it is 0022
+```
+
+- If `umask` is showing `0022` now, you are good to go:
+
+```
+cd /opt
+git clone https://github.com/mailcow/mailcow-dockerized
+cd mailcow-dockerized
+./generate_config.sh
+```
+
+- Enter your `FQDN`. This should be _your server's public IP address_, which is why a self-hosted homelab isn't ideal for an email server.
+- Enter your timezone (ex. `America/New_York`).
+- Select the `master branch` as we wish to have the most stable version of `Mailcow`.
+- Now, the `Mailcow` `bash` script should have created a config file which you may edit to your liking:
+
+```
+sudo nano mailcow.conf
+```
+
+- Mailcow __requires Docker Compose v2__. Run the following to install it:
+
+```
+LATEST=$(curl -Ls -w %{url_effective} -o /dev/null https://github.com/docker/compose/releases/latest) && LATEST=${LATEST##*/} && curl -L https://github.com/docker/compose/releases/download/$LATEST/docker-compose-$(uname -s)-$(uname -m) > /usr/local/bin/docker-compose
+chmod +x /usr/local/bin/docker-compose
+```
+
+- Now, apply the changes made and start the mail server:
+
+```
+sudo docker-compose up -d
+```
+
+> Note, the first run will take some time as there are numerous downloads required.
+
+- After the completion, you should see some green "done" indicators on screen. To check the status, run:
+
+```
+sudo docker-compose ps
+```
+
+- You should notice an "Up" text maker in the `STATUS` column.
+- If all looks good, run a `telnet` to check if port `25` is open and listening:
+
+```
+telnet 127.0.0.1 25
+```
+
+- If it returns a `Connection refused`, then we know the firewall or VPS network is blocking it. In which case, we need to update the firewall rules as follows:
+
+```
+sudo ufw default allow outgoing
+sudo ufw allow 22, 25, 80, 110, 443, 465, 587, 993, 995, 4190/tcp
+```
+
+> If you get an `ERROR: Need 'to' or 'from' clause` response, you will need to enter each port one by one as follows `ufw allow 22/tcp`, `ufw allow 25/tcp`, etc.
+
+- If you still have connection issues when running `telnet 127.0.0.1 25`, then you likely have to add more _ingress rules_ in your VPS server settings.
+- To confirm this suspicion further, run `netstat -tulpen` and see what ports are open. If you the ports listed match the ingress ports you added, then we have a good clue for the next actions.
+- Add ingress rules for `22, 25, 80, 110, 443, 465, 587, 993, 995, 4190/tcp` ports. Follow the template configuration below when configuring your ingress rules:
+
+```
+# Mailcow ingress rule
+Source CIDR: 0.0.0.0/0
+IP Protocol: TCP
+Sorce Port Range: All
+Destination Port Range: 25
+Description: Mailcow
+```
+
+- After adding all the ingress rules, restart docker and check the open ports:
+
+```
+sudo systemctl restart docker
+netstat -tulpen
+telnet 127.0.0.1 25
+```
+
+#### Protainer x Ngix x Mailcow
+If you wish to run `Nginx`, then you will need to make special configurations. We have to create a number of custom files to make Portainer and Mailcow play nicely together.
+
+- Within the `mailcow-dockerized` root folder, create a new new file as follows:
+
+```
+cd /
+cd /opt/mailcow-dockerized
+sudo nano docker-compose.override.yml
+```
+
+- Copy and paste the following contents into that new `.yml` file:
+
+```
+version: '2.1'
+services:
+    portainer-mailcow:
+      image: portainer/portainer-ce
+      volumes:
+        - /var/run/docker.sock:/var/run/docker.sock
+        - ./data/conf/portainer:/data
+      restart: always
+      dns:
+        - 172.22.1.254
+      dns_search: mailcow-network
+      networks:
+        mailcow-network:
+          aliases:
+            - portainer
+```
+
+- Save and exit that `.yml` file.
+- Create a `data/conf/nginx/portainer.conf` config file:
+
+```
+sudo nano data/conf/nginx/portainer.conf
+```
+
+- Copy and paste the following contents into that new `data/conf/nginx/portainer.conf` file:
+
+```
+upstream portainer {
+  server portainer-mailcow:9000;
+}
+
+map $http_upgrade $connection_upgrade {
+  default upgrade;
+  '' close;
+}
+```
+
+- Save and exit that `.conf` file.
+- Insert a new location to the default mailcow site by creating the file `data/conf/nginx/site.portainer.custom`:
+
+```
+sudo nano data/conf/nginx/site.portainer.custom
+```
+
+- Copy and paste the following conents:
+
+```
+  location /portainer/ {
+    proxy_http_version 1.1;
+    proxy_set_header Host              $http_host;   # required for docker client's sake
+    proxy_set_header X-Real-IP         $remote_addr; # pass on real client's IP
+    proxy_set_header X-Forwarded-For   $proxy_add_x_forwarded_for;
+    proxy_set_header X-Forwarded-Proto $scheme;
+    proxy_read_timeout                 900;
+
+    proxy_set_header Connection "";
+    proxy_buffers 32 4k;
+    proxy_pass http://portainer/;
+  }
+
+  location /portainer/api/websocket/ {
+    proxy_http_version 1.1;
+    proxy_set_header Upgrade $http_upgrade;
+    proxy_set_header Connection $connection_upgrade;
+    proxy_pass http://portainer/api/websocket/;
+  }
+```
+- Save and exit that `.custom` file.
+
+```
+sudo docker-compose up -d && docker-compose restart nginx-mailcow
+```
+
+> Note: The nginx-mailcow restart seems to always produce the following error: `
+ERROR: Invalid interpolation format for "environment" option in service "postfix-mailcow": "REDIS_SLAVEOF_IP=${REDIS_SLAVEOF_IP:-}"`
