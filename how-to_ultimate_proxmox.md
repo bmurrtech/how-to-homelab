@@ -914,18 +914,138 @@ nameserver 9.9.9.9
 - Create a new Ubuntu VM and name it Portainer.
 - Install Docker and Portainer using the following commands:
 
+### Install Docker
+
+- If you always want to automatically get the latest version of Docker on Ubuntu, you must add its official repository to Ubuntu system. To do that, run the commands below to install prerequisite packages:
 
 ```
-sudo curl -fsSL https://get.docker.com -o get-docker.sh
+sudo apt update && sudo apt upgrade
 
-sudo sh get-docker.sh
-
-sudo apt-get install ./docker-desktop
-
-sudo docker volume create portainer_data
-
-sudo docker run -d -p 8000:8000 -p 9443:9443 --name portainer --restart=always -v /var/run/docker.sock:/var/run/docker.sock -v portainer_data:/data portainer/portainer-ce:latest
+sudo apt-get install apt-transport-https ca-certificates curl gnupg-agent software-properties-common
 ```
+
+- Next, run the commands below to download and install Docker’s official GPG key. The key is used to validate packages installed from Docker’s repository making sure they’re trusted.
+
+```
+curl -fsSL https://download.docker.com/linux/ubuntu/gpg | sudo apt-key add -
+
+sudo apt-key fingerprint 0EBFCD88
+```
+
+- The response would be like this:
+
+```
+Response:
+
+pub   rsa4096 2017-02-22 [SCEA]
+      9DC8 5822 9FC7 DD38 854A  E2D8 8D81 803C 0EBF CD88
+uid           [ unknown] Docker Release (CE deb) <docker@docker.com>
+sub   rsa4096 2017-02-22 [S]
+```
+
+- Now that the official GPG key is installed, run the commands below to add its stable repository to Ubuntu.
+
+```
+sudo add-apt-repository "deb [arch=amd64] https://download.docker.com/linux/ubuntu $(lsb_release -cs) stable"
+```
+
+> To add the nightly or test repository, add the word nightly or test (or both) after the word stable in the commands below.
+
+- The command below will always install the highest possible Docker version:
+
+
+```
+sudo apt-get install docker-ce docker-ce-cli containerd.io
+```
+
+- Reboot your instance:
+
+```
+sudo reboot
+```
+
+- To verify that Docker CE is installed correctly you can run the __hello-world__ image:
+
+```
+sudo docker run hello-world
+
+# if it is installed correctl you should see:
+Response:
+
+Hello from Docker!
+This message shows that your installation appears to be working correctly.
+
+To generate this message, Docker took the following steps:
+1. The Docker client contacted the Docker daemon.
+2. The Docker daemon pulled the "hello-world" image from the Docker Hub.
+(amd64)
+3. The Docker daemon created a new container from that image which runs the
+executable that produces the output you are currently reading.
+4. The Docker daemon streamed that output to the Docker client, which sent it
+to your terminal.
+```
+
+### Install Docker Compose 
+
+- Install __>v2__ `docker-compose` (mailcow requires v2 and newer). Please [refer to the official Docker Github for latest releases](https://github.com/docker/compose/releases) and change the `<DESIRED_VER>` version number below to match what you choose:
+
+```
+sudo curl -L "https://github.com/docker/compose/releases/download/<DESIRED_VER>/docker-compose-$(uname -s)-$(uname -m)" -o /usr/local/bin/docker-compose
+
+# for example:
+sudo curl -L "https://github.com/docker/compose/releases/download/2.18.1/docker-compose-$(uname -s)-$(uname -m)" -o /usr/local/bin/docker-compose
+```
+
+- After downloading it, run the commands below to apply executable permissions to the binary file and create a symbolic link to `/usr/binary`:
+
+```
+sudo chmod +x /usr/local/bin/docker-compose
+
+sudo ln -s /usr/local/bin/docker-compose /usr/bin/docker-compose
+```
+
+> Alternative `docker-compose` install as instructed by mailcow:
+> ```
+> LATEST=$(curl -Ls -w %{url_effective} -o /dev/null https://github.com/docker/compose/releases/latest) &&
+> LATEST=${LATEST##*/} && curl -L https://github.com/docker/compose/releases/download/$LATEST/docker-compose-$(uname 
+> s)-$(uname -m) > /usr/local/bin/docker-compose
+> chmod +x /usr/local/bin/docker-compose
+> ```
+
+- Now, Docker Compose should work. To test it, we will run the command below:
+
+```
+docker-compose --version
+
+# the response should read something like:
+Response:
+docker-compose version 1.24.0, build 0aa59064
+```
+
+### Install Portainer
+
+- You can use Docker command to deploy the Portainer Server; note the agent is not needed on standalone hosts, however, it does provide additional functionality if used.
+- To get the server installed, run the commands below:
+
+```
+cd ~/
+docker volume create portainer_data
+docker run -d -p 8000:8000 -p 9000:9000 --name=portainer --restart=always -v /var/run/docker.sock:/var/run/docker.sock -v portainer_data:/data portainer/portainer
+```
+
+> Note: the `-v /var/run/docker.sock:/var/run/docker.sock` option can be used in Linux environments only.
+
+- At this point, all you need to do is access Portainer portal to manage Docker. Open your web browser and browse to the server’s hostname or IP address followed by port #9000
+
+```
+http://<SERVER_IP>:9000
+```
+
+- You should get Portainer login page to create an admin password.
+- Submit a new password (make it a good one as this is publically accessible if hosted on a VPS).
+- Select __Local__ as the type of envirnoment you want to manage.
+- Since we installed Docker on the same machine, select to connect and manage Docker locally.
+
 - Configure your firewall via `UFW` to access the Portainer web UI:
 
 ```
@@ -948,7 +1068,6 @@ sudo docker restart portainer
 # check Portainer status
 docker ps
 ```
-
 
 # Plex
 
