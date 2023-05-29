@@ -1,4 +1,121 @@
-# Satisfactory
+# Baremetal Multi-game Server Install
+
+### Pterodactyl Game Server Manager
+Pterodactly is a game server manager with a web UI for creating and managing mulitple game servers. If your server is dedicated for games, and you want the versatility of adding/removing/running different game servers on one dedicated VPS or VM, I reccommend installing it.
+
+There are multiple dependencies required by Pterodactly, from Let's Encrypt to a MySQL database which complicates installation; however, thanks to the amazing gaming comminity, vilhelmprytz has created an automated `bash` script to make installing Pterodactyl a breeze!
+
+#### Automated Pterodactyl Install Method
+
+- See the __unofficial__ Pterodactyl script by vilhelmprytz on his: [Github](https://github.com/pterodactyl-installer/pterodactyl-installer)
+- And watch [SoulStriker's tutorial video](https://www.youtube.com/watch?v=E2hEork-DYc) on how to use vilhelmprytz installer script.
+
+> Disclaimer: I have not verified if this `bash` script is malicious or not. Nor have I checked the Pterodactl code. If you are concerned about potential malware or boot/root-kits, exercise zero trust and read through source code line by line to verify nothing is malicous. If this is not worth it, you have to make a choice between convenience and manually installing Pterodactyl yourself.
+
+#### Manual Pterodactyl Install Method
+
+If you are more concerned about security and running an unofficial `bash` installer script, then start with [TechnoTim's Pterodactyl install using Docker](https://www.youtube.com/watch?v=_ypAmCcIlBE&pp=ygUacHRlcm9kYWN0eWwgcGFuZWwgaW5zdGFsbCA%3D)
+
+- For starters, I'm installing Portainer as my Docker container manager. Open a new tab and [follow my Portainer install guide here](https://github.com/bmurrtech/how-to-homelab/blob/main/how-to_ultimate_proxmox.md#portainer) and come back to this guide.
+- Now, we need the contents of Pterodactyl's `docker-compose.yml`.
+- I'm grabbing the `docker-compose-example.yml` [from Pterodactyl's official Github](https://github.com/pterodactyl/panel/blob/develop/docker-compose.example.yml)
+- Next, I have modified the contents of the default `.yml` file according to [TechnoTim's Pterodactyl config](https://www.youtube.com/watch?v=_ypAmCcIlBE&pp=ygUacHRlcm9kYWN0eWwgcGFuZWwgaW5zdGFsbCA%3D) to enable my reverse proxy service with Cloudflare to work with Pterodactyl.
+
+```
+version: '3.8'
+x-common:
+  database:
+    &db-environment
+    # Do not remove the "&db-password" from the end of the line below, it is important
+    # for Panel functionality.
+    MYSQL_PASSWORD: &db-password "CHANGE_ME"
+    MYSQL_ROOT_PASSWORD: "CHANGE_ME_TOO"
+  panel:
+    &panel-environment
+    APP_URL: "http://example.com"
+    # A list of valid timezones can be found here: http://php.net/manual/en/timezones.php
+    APP_TIMEZONE: "UTC"
+    APP_SERVICE_AUTHOR: "noreply@example.com"
+    # Uncomment the line below and set to a non-empty value if you want to use Let's Encrypt
+    # to generate an SSL certificate for the Panel.
+    # LE_EMAIL: ""
+  mail:
+    &mail-environment
+    MAIL_FROM: "noreply@example.com"
+    MAIL_DRIVER: "smtp"
+    MAIL_HOST: "mail"
+    MAIL_PORT: "1025"
+    MAIL_USERNAME: ""
+    MAIL_PASSWORD: ""
+    MAIL_ENCRYPTION: "true"
+
+#
+# ------------------------------------------------------------------------------------------
+# DANGER ZONE BELOW
+#
+# The remainder of this file likely does not need to be changed. Please only make modifications
+# below if you understand what you are doing.
+#
+services:
+  database:
+    image: mariadb:10.5
+    restart: always
+    command: --default-authentication-plugin=mysql_native_password
+    volumes:
+      - "/srv/pterodactyl/database:/var/lib/mysql"
+    environment:
+      <<: *db-environment
+      MYSQL_DATABASE: "panel"
+      MYSQL_USER: "pterodactyl"
+  cache:
+    image: redis:alpine
+    restart: always
+  panel:
+    image: ghcr.io/pterodactyl/panel:latest
+    restart: always
+    ports:
+      - "80:80"
+      - "443:443"
+    links:
+      - database
+      - cache
+    volumes:
+      - "/srv/pterodactyl/var/:/app/var/"
+      - "/srv/pterodactyl/nginx/:/etc/nginx/http.d/"
+      - "/srv/pterodactyl/certs/:/etc/letsencrypt/"
+      - "/srv/pterodactyl/logs/:/app/storage/logs"
+    environment:
+      <<: [*panel-environment, *mail-environment]
+      DB_PASSWORD: *db-password
+      APP_ENV: "production"
+      APP_ENVIRONMENT_ONLY: "false"
+      CACHE_DRIVER: "redis"
+      SESSION_DRIVER: "redis"
+      QUEUE_DRIVER: "redis"
+      REDIS_HOST: "cache"
+      DB_HOST: "database"
+      DB_PORT: "3306"
+networks:
+  default:
+    ipam:
+      config:
+        - subnet: 172.20.0.0/16
+```
+
+- Since no user was created via the `.yml` file, we need to run a specific command to set one so we can access the Pterodactyl web UI. Run the following command to create an admin user:
+
+```
+docker-compose run --rm panel php artisan p:user:mak
+```
+
+- Follow the on-screen prompts to create an admin user.
+- Once completed, try to login to your Pterodactyl web UI (ex. https://x.x.x.x:xxxx).
+
+__WIP__
+
+# Baremetal Single Game Server Install
+
+### Satisfactory
 [Ref. video](https://www.youtube.com/watch?v=b4ZrXxJ_DcM)
 
 - __Create a VM__ running Ubuntu server. Ideally, clone a VM from a [cloud init 20.04 on Proxmox hypervisor](https://github.com/bmurrtech/how-to-homelab/blob/main/how-to_ultimate_proxmox.md)!
@@ -174,7 +291,7 @@ tail -n3 -f /var/log/satisfactory.log
 tail -n3 -f /var/log/satisfactory.err
 ```
 
-### Joining the Satisfactory Server for the First Time
+#### Joining the Satisfactory Server for the First Time
 
 - Now, __open you copy of the game__, and __navigate to "Server Manager"__ in the game.
 
@@ -187,7 +304,7 @@ tail -n3 -f /var/log/satisfactory.err
 
 > If you get a `timeout error`, just wait for the server to finish creating.
 
-### Manually Start Satisfactory Server
+#### Manually Start Satisfactory Server
 
 - __Invoke the `steamcmd` to install the Satisfactory server__ in this new `steam` user directory/folder as follows:
 
@@ -233,7 +350,7 @@ app_update 1690800 -validate
 __FIN__
 
 
-# Ark: Survival Evolved
+### Ark: Survival Evolved
 [Ref video for ARK](https://www.youtube.com/watch?v=oPN08QKYGvg)
 
 - __Configure/optomize settings for the Ark gameserver__:
@@ -320,10 +437,10 @@ systemctl restart ark
 systemctl stop ark
 ```
 
-# Modded Minecraft
+### Modded Minecraft
 This tutorial assumes you already have an Ubuntu instance ready to go and that you want to run a __1.12.2__ Minecraft Server which requires `Java 8`. If you want to run Minecraft 1.16, then you will need to install a different version of `Java` with the following command: `apt install default-jre`
 
-### Install Java 8
+#### Install Java 8
 - As an admin user, run the following installation commands:
 
 ```
@@ -337,7 +454,7 @@ java -version
  sudo update-alternatives --config java
  ```
  
- ### Crafting Environment
+ #### Crafting Environment
 
 - If you haven't already, run an update on your Ubutnu system:
 
