@@ -184,7 +184,13 @@ https://github.com/mailcow/mailcow-dockerized
 
 - Click "Deploy Stack" (button)
 
+__ERROR__
+
+![depoly_mailcow_fail](https://i.imgur.com/K9Hg96A.png)
+
 #### Install mailcow without Portainer
+If the above method failed, consider installing w/o Portainer.
+
 - Make sure your `umask` equals `0022` __before__ you clone the `Mailcow` git.
 
 ```
@@ -232,7 +238,7 @@ sudo docker-compose ps
 - You should notice an "Up" text maker in the `STATUS` column.
 - If all looks good, time to configure the firewall rules.
 - 
-### Step 5 Configure Firewall Rules
+### Configure Firewall Rules
 
 #### VPS Firewall Config
 - Every VPS provider may be a little different, but you need to find the firewall/security, port, ingress/egress settings and configure them. I am working in [Oracle Cloud's ingress rules](https://docs.oracle.com/en-us/iaas/developer-tutorials/tutorials/apache-on-ubuntu/01oci-ubuntu-apache-summary.htm), so this tutorial assumes as much.
