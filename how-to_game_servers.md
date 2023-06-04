@@ -1,11 +1,15 @@
-# Baremetal Multi-game Server Install
+# Table of Contents
+- [How-to Pterodactyl Multi-game Server Manager](#pterodactyl)
+- [How-to Satisfactory Gamer Server](#satisfactory)
+- [How-to ARK Survival Evolved Game Server](#ark)
+- [How-to Modded Minecraft Game Server](#modded-minecraft)
 
-### Pterodactyl Game Server Manager
+# Pterodactyl
 Pterodactly is a game server manager with a web UI for creating and managing mulitple game servers. If your server is dedicated for games, and you want the versatility of adding/removing/running different game servers on one dedicated VPS or VM, I reccommend installing it.
 
 There are multiple dependencies required by Pterodactly, from Let's Encrypt to a MySQL database which complicates installation; however, thanks to the amazing gaming comminity, vilhelmprytz has created an automated `bash` script to make installing Pterodactyl a breeze!
 
-#### Automated Pterodactyl Install Method
+### Automated Pterodactyl Install Method
 
 __Resources__:
 - See the __unofficial__ Pterodactyl script by vilhelmprytz on his: [Github](https://github.com/pterodactyl-installer/pterodactyl-installer)
@@ -174,9 +178,7 @@ docker-compose run --rm panel php artisan p:user:mak
 
 __WIP__
 
-# Baremetal Single Game Server Install
-
-### Satisfactory
+# Satisfactory
 [Ref. video](https://www.youtube.com/watch?v=b4ZrXxJ_DcM)
 
 - __Create a VM__ running Ubuntu server. Ideally, clone a VM from a [cloud init 20.04 on Proxmox hypervisor](https://github.com/bmurrtech/how-to-homelab/blob/main/how-to_ultimate_proxmox.md)!
@@ -352,7 +354,7 @@ tail -n3 -f /var/log/satisfactory.log
 tail -n3 -f /var/log/satisfactory.err
 ```
 
-#### Joining the Satisfactory Server for the First Time
+### Joining the Satisfactory Server for the First Time
 
 - Now, __open you copy of the game__, and __navigate to "Server Manager"__ in the game.
 
@@ -365,7 +367,7 @@ tail -n3 -f /var/log/satisfactory.err
 
 > If you get a `timeout error`, just wait for the server to finish creating.
 
-#### Manually Start Satisfactory Server
+### Manually Start Satisfactory Server
 
 - __Invoke the `steamcmd` to install the Satisfactory server__ in this new `steam` user directory/folder as follows:
 
@@ -411,8 +413,12 @@ app_update 1690800 -validate
 __FIN__
 
 
-### Ark: Survival Evolved
+# ARK
 [Ref video for ARK](https://www.youtube.com/watch?v=oPN08QKYGvg)
+
+- __Create a VM__ running Ubuntu server. Ideally, clone a VM from a [cloud init 20.04 on Proxmox hypervisor](https://github.com/bmurrtech/how-to-homelab/blob/main/how-to_ultimate_proxmox.md)!
+
+- __Allocate 12-16GB of RAM__ to the VM
 
 - __Configure/optomize settings for the Ark gameserver__:
 
@@ -424,21 +430,92 @@ echo "*hard nofile 100000" >> /etc/security/limits.conf
 ulimit -n 100000
 ```
 
-- Follow all prior steps to get `steamcmd` installed, but this time, __create a folder within `/home/steam/` called `ark`__ specifically for Ark.
-- Once you have created a new ARK directory, __run the fullowing__ `steamcmd` to install the ARK server:
+- __Install dependencies as `root`__:
+
+> Ensure you run commands as `root` or `admin` with proper permission level. Type `sudo -i` to switch to root user. Note: Some servers disable `root` by default, therefore, you need to give your user account root/admin permissions to run the commands required for a _64-bit machine_.
 
 ```
-steamcmd +login anonymous +force_install_dir /home/steam/__arkserver +app_update 376030__ +quit
+sudo add-apt-repository multiverse
+sudo apt install software-properties-common
+sudo dpkg --add-architecture i386
+sudo apt update && apt -y upgrade
+sudo apt install lib32gcc1
 ```
 
-- Now we need to add custom parameters to an `ark.service` file. Change to the admin user and __edit the file as follows__:
+- __Make a new directory for `arkserver`__ to live insdie:
 
 ```
-nano /etc/systemd/system/ark.service
+sudo mkdir /home/steam/arkserver
 ```
 
-- __Copy and paste__ the following into that `ark.service` file:
+- __Check the firewall__ settings:
 
+```
+sudo ufw status
+```
+
+- If the firewall settings return: `Status: inactive` then __enable it and open up the right ports__.
+- __Open up the port__ that is __specific to Satisfactory__ as follows:
+
+```
+sudo ufw 7777
+sudo ufw 27015
+sudo ufw enable
+sudo ufw status
+```
+
+> The status should report ports as `ALLOW`.
+
+- Also, __don't forget to port forward `777` and `27015` on your router__.
+
+- __Create a Steam user__ (must run as admin)
+
+```
+sudo useradd -m -s /bin/bash steam
+```
+
+- __Set/create a password__
+
+```
+sudo passwd steam
+```
+
+```
+sudo -s
+usermod -aG sudo steam
+su - steam
+```
+
+- __Install `steamcmd`__:
+
+```
+sudo apt-get install steamcmd
+```
+
+> Learn more about `steamcmd` and how it functions from the [Steam developer Wiki](https://developer.valvesoftware.com/wiki/SteamCMD)
+
+- __Login as `steam` user__:
+
+```
+su - steam
+```
+
+#### Create an Ark `systemd` Service file
+
+- First, __login as an admin user__ (required for `sudo` to work when creating a `service.file`).
+- __Make a link__ from `/user/steam/steamcmd` to /home/steam/:
+
+```
+ln -s /usr/games/steamcmd steamcmd
+```
+
+-__Create a new service file__ for Ark
+
+```
+sudo nano /etc/systemd/system/ark.service
+```
+
+- __Copy & paste__ the following contents into the new file:
 
 ```
 [Unit]
@@ -467,7 +544,13 @@ WantedBy=multi-user.target
 
 > To be cross compatiable with the EPIC game launcher, add `-NoBattlEye` after `-log` on the `ExecStart` line (already included in the above configuration).
 
-- __Set the server password and admin server password__:
+- __Save it__:
+
+```
+CTRL + X, Y, ENTER
+```
+
+- __Set the server password__ and admin server password:
 
 ```
 sudo nano /home/steam/arkserver/ShooterGame/Saved/Config/LinuxServer/GameUserSettings.ini
@@ -477,19 +560,15 @@ ServerPassword=YourServerPassword
 ServerAdminPassword=YourServerAdminPassword
 ```
 
-- __Whitelist the following ports__ in the Ubuntu server:
+- After creating the service, you will need to __execute a daemon-reload__ to load the new `service.file` into systemd. To keep the server running enter:
 
 ```
-sudo ufw 7777
-sudo ufw 27015
+sudo systemctl daemon-reload
 ```
 
-- Also, __don't forget to port forward `777` and `27015` on your router__.
-
-- To ensure the VM starts the ARK server on reboot, enter the following commands:
+- Use the following commands to control your new Ark server:
 
 ```
-systemctl daemon-reload
 systemctl start ark
 systemctl status ark.service
 
@@ -498,7 +577,28 @@ systemctl restart ark
 systemctl stop ark
 ```
 
-### Modded Minecraft
+- You can __check the running status__ with:
+
+```
+sudo systemctl status ark.service
+```
+
+- If configured correctly, the output should look something like:
+
+```
+● ark.service - Ark dedicated server
+     Loaded: loaded (/etc/systemd/system/ark.service; enabled; vendor preset: enabled)
+     Active: active (running) since Tue 2021-11-02 15:30:13 CET; 2min 21s ago
+   Main PID: 2529 (arkserver.s)
+      Tasks: 24 (limit: 7053)
+     Memory: 8G
+        CPU: 4min 5.965s
+     CGroup: /system.slice/ark.service
+             ├─2529 /bin/sh /home/steam/arkserver/...
+             └─2536 /home/steam/ariserver...e
+```
+
+# Modded Minecraft
 This tutorial assumes you already have an Ubuntu instance ready to go and that you want to run a __1.12.2__ Minecraft Server which requires `Java 8`. If you want to run Minecraft 1.16, then you will need to install a different version of `Java` with the following command: `apt install default-jre`
 
 #### Install Java 8
