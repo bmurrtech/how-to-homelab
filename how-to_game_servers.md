@@ -442,32 +442,6 @@ sudo apt update && apt -y upgrade
 sudo apt install lib32gcc1
 ```
 
-- __Make a new directory for `arkserver`__ to live insdie:
-
-```
-sudo mkdir /home/steam/arkserver
-```
-
-- __Check the firewall__ settings:
-
-```
-sudo ufw status
-```
-
-- If the firewall settings return: `Status: inactive` then __enable it and open up the right ports__.
-- __Open up the port__ that is __specific to Satisfactory__ as follows:
-
-```
-sudo ufw 7777
-sudo ufw 27015
-sudo ufw enable
-sudo ufw status
-```
-
-> The status should report ports as `ALLOW`.
-
-- Also, __don't forget to port forward `777` and `27015` on your router__.
-
 - __Create a Steam user__ (must run as admin)
 
 ```
@@ -486,11 +460,40 @@ usermod -aG sudo steam
 su - steam
 ```
 
+- __Make a new directory for `arkserver`__ to live insdie:
+
+```
+sudo mkdir /home/steam/arkserver
+```
+
+- __Check the firewall__ settings:
+
+```
+sudo ufw status
+```
+
+- If the firewall settings return: `Status: inactive` then __enable it and open up the right ports__.
+- __Open up the port__ that is __specific to Satisfactory__ as follows:
+
+```
+sudo ufw allow 22
+sudo ufw allow 7777
+sudo ufw allow 27015
+sudo ufw enable
+sudo ufw status
+```
+
+> The status should report ports as `ALLOW`.
+
+- Also, __don't forget to port forward `777` and `27015` on your router__.
+
 - __Install `steamcmd`__:
 
 ```
 sudo apt-get install steamcmd
 ```
+
+- Progress through the installer screen that pops up (select `OK` and agree to terms).
 
 > Learn more about `steamcmd` and how it functions from the [Steam developer Wiki](https://developer.valvesoftware.com/wiki/SteamCMD)
 
@@ -500,7 +503,16 @@ sudo apt-get install steamcmd
 su - steam
 ```
 
-#### Create an Ark `systemd` Service file
+- Download and install the ARK game server from Steam:
+
+```
+steamcmd +login anonymous +force_install_dir /home/steam/arkserver +app_update 376030 +quit
+```
+
+> Depending on your internet speed and server specs, download and install times will vary. _Wait until the entire installation process completes_ before continuing.
+
+### Create an Ark `systemd` Service file
+This `systemd` file will make the ARK server start automatically on boot.
 
 - First, __login as an admin user__ (required for `sudo` to work when creating a `service.file`).
 - __Make a link__ from `/user/steam/steamcmd` to /home/steam/:
@@ -542,7 +554,7 @@ LimitNOFILE=100000
 WantedBy=multi-user.target
 ```
 
-> To be cross compatiable with the EPIC game launcher, add `-NoBattlEye` after `-log` on the `ExecStart` line (already included in the above configuration).
+> To be cross compatiable with the EPIC game launcher, add `-NoBattlEye` after `-log` on the `ExecStart` line (note: _already included_ in the above configuration).
 
 - __Save it__:
 
