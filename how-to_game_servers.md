@@ -265,7 +265,7 @@ In order to make the server start on boot automatically, you have to create a cu
 ln -s /usr/games/steamcmd steamcmd
 ```
 
--__Create a new service file__ for Satisfactory:
+- __Create a new service file__ for Satisfactory:
 
 ```
 sudo nano /etc/systemd/system/satisfactory.service
@@ -414,7 +414,8 @@ __FIN__
 
 
 # ARK
-[Ref video for ARK](https://www.youtube.com/watch?v=oPN08QKYGvg)
+- [Ref video for ARK](https://www.youtube.com/watch?v=oPN08QKYGvg)
+- [Ref ARK Wiki](https://ark.fandom.com/wiki/Dedicated_server_setup)
 
 - __Create a VM__ running Ubuntu server. Ideally, clone a VM from a [cloud init 20.04 on Proxmox hypervisor](https://github.com/bmurrtech/how-to-homelab/blob/main/how-to_ultimate_proxmox.md)!
 
@@ -509,7 +510,7 @@ su - steam
 steamcmd +login anonymous +force_install_dir /home/steam/arkserver +app_update 376030 +quit
 ```
 
-> Depending on your internet speed and server specs, download and install times will vary. _Wait until the entire installation process completes_ before continuing.
+> Depending on your internet speed and server specs, download and install times will vary. _Wait until the entire installation process completes_ before continuing. You should see a message like, "Success! App fully installed."
 
 ### Create an Ark `systemd` Service file
 This `systemd` file will make the ARK server start automatically on boot.
@@ -520,6 +521,8 @@ This `systemd` file will make the ARK server start automatically on boot.
 ```
 ln -s /usr/games/steamcmd steamcmd
 ```
+
+> Note: After running this command, you should see a new directory in `/home/steam/arkserver` called `steamcmd`
 
 -__Create a new service file__ for Ark
 
@@ -562,16 +565,6 @@ WantedBy=multi-user.target
 CTRL + X, Y, ENTER
 ```
 
-- __Set the server password__ and admin server password:
-
-```
-sudo nano /home/steam/arkserver/ShooterGame/Saved/Config/LinuxServer/GameUserSettings.ini
-
-# add and modify these lines in the .ini file
-ServerPassword=YourServerPassword
-ServerAdminPassword=YourServerAdminPassword
-```
-
 - After creating the service, you will need to __execute a daemon-reload__ to load the new `service.file` into systemd. To keep the server running enter:
 
 ```
@@ -581,6 +574,7 @@ sudo systemctl daemon-reload
 - Use the following commands to control your new Ark server:
 
 ```
+# choose to run as the `steam` user
 systemctl start ark
 systemctl status ark.service
 
@@ -594,7 +588,6 @@ systemctl stop ark
 ```
 sudo systemctl status ark.service
 ```
-
 - If configured correctly, the output should look something like:
 
 ```
@@ -609,6 +602,31 @@ sudo systemctl status ark.service
              ├─2529 /bin/sh /home/steam/arkserver/...
              └─2536 /home/steam/ariserver...e
 ```
+
+- __Set the server password__ and admin server password:
+
+```
+sudo nano /home/steam/arkserver/ShooterGame/Saved/Config/LinuxServer/GameUserSettings.ini
+
+# add and modify these lines in the .ini file
+ServerPassword=YourServerPassword
+ServerAdminPassword=YourServerAdminPassword
+```
+
+### ARK Troubleshooting
+
+If you are expericing installation issues and errors, run through the `steamcmd` install manually in the following steps:
+
+```
+cd /home/steam/
+steamcmd
+force_install_dir /home/steam/arkserver
+login anonymous
+app_update 376030 validate
+exit
+```
+
+- Now, retry the `systemctl start ark`. If you are still having issues, run a `systemctl status ark.service` and research the specific error message you have on the ARK forums and wiki for solutions.
 
 # Modded Minecraft
 This tutorial assumes you already have an Ubuntu instance ready to go and that you want to run a __1.12.2__ Minecraft Server which requires `Java 8`. If you want to run Minecraft 1.16, then you will need to install a different version of `Java` with the following command: `apt install default-jre`
