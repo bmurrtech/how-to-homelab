@@ -461,12 +461,6 @@ usermod -aG sudo steam
 su - steam
 ```
 
-- __Make a new directory for `arkserver`__ to live insdie:
-
-```
-sudo mkdir /home/steam/arkserver
-```
-
 - __Check the firewall__ settings:
 
 ```
