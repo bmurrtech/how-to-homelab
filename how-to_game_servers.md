@@ -197,12 +197,6 @@ sudo apt update && apt -y upgrade
 sudo apt install lib32gcc1
 ```
 
-- __Make a new directory for `sfserver`__ to live insdie:
-
-```
-sudo mkdir /home/steam/sfserver
-```
-
 - __Check the firewall__ settings:
 
 ```
