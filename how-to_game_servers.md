@@ -591,7 +591,7 @@ sudo systemctl status ark.service
              └─2536 /home/steam/ariserver...e
 ```
 
-- __Set the server password__ and admin server password:
+- OPTIONAL __Set the server password__ and admin server password:
 
 ```
 sudo nano /home/steam/arkserver/ShooterGame/Saved/Config/LinuxServer/GameUserSettings.ini
@@ -601,13 +601,15 @@ ServerPassword=YourServerPassword
 ServerAdminPassword=YourServerAdminPassword
 ```
 
+> __WARNING__ If you decide to set a password for your ARK server, __Epic Games__ clients will __NOT be able to join__.
+
 ### Joining the ARK Server
 
 #### ARK on Epic Games
 - Open ARK and select the `HOST / LOCAL` option in the menu.
 - Click `Play Single Player` - there is no need to edit settings or change the map as this doesn't affect you connecting to the server.
 - When loaded in, press `TAB` to open the game's Console.
-- In the Console, type open `[SERVER_IP]:7777`. This will then begin connecting you to your server.
+- In the Console, type `open [SERVER_IP]:7777`. This will then begin connecting you to your server.
 
 > Note that your ARK server may be running on port `27015` as this is the port required by Steam, but for Epic Games, you will need to use port `7777`, to allow for direct connection to your server.
 
