@@ -601,7 +601,24 @@ ServerPassword=YourServerPassword
 ServerAdminPassword=YourServerAdminPassword
 ```
 
-### ARK Troubleshooting
+### Joining the ARK Server
+
+#### ARK on Epic Games
+- Open ARK and select the `HOST / LOCAL` option in the menu.
+- Click `Play Single Player` - there is no need to edit settings or change the map as this doesn't affect you connecting to the server.
+- When loaded in, press `TAB` to open the game's Console.
+- In the Console, type open `[SERVER_IP]:7777`. This will then begin connecting you to your server.
+
+> Note that your ARK server may be running on port `27015` as this is the port required by Steam, but for Epic Games, you will need to use port `7777`, to allow for direct connection to your server.
+
+#### ARK on Steam Games
+- In the Steam client under View > Servers, click the Favorites tab.
+- Add your server by clicking Add A Server, then entering your Server Address into the popup box and clicking Add This Address To Favorites.
+- Open the game ARK and click Join ARK.
+- In the bottom left corner under the filter options, change the Session Filter to Favorites.
+- Press refresh, and then you should see your server and be able to join.
+
+### ARK Server Troubleshooting
 
 If you are expericing installation issues and errors, run through the `steamcmd` install manually in the following steps:
 
