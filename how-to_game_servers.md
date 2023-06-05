@@ -467,6 +467,7 @@ sudo ufw status
 ```
 sudo ufw allow 22
 sudo ufw allow 7777
+sudo ufw allow 7778
 sudo ufw allow 27015
 sudo ufw enable
 sudo ufw status
@@ -474,7 +475,7 @@ sudo ufw status
 
 > The status should report ports as `ALLOW`.
 
-- Also, __don't forget to port forward `777` and `27015` on your router__.
+- Also, __don't forget to port forward `7777`, `7778`, and `27015` TCP and UDP on your router__.
 
 - __Install `steamcmd`__:
 
@@ -614,11 +615,11 @@ ServerAdminPassword=YourServerAdminPassword
 > Note that your ARK server may be running on port `27015` as this is the port required by Steam, but for Epic Games, you will need to use port `7777`, to allow for direct connection to your server.
 
 #### ARK on Steam Games
-- In the Steam client under View > Servers, click the Favorites tab.
-- Add your server by clicking Add A Server, then entering your Server Address into the popup box and clicking Add This Address To Favorites.
-- Open the game ARK and click Join ARK.
-- In the bottom left corner under the filter options, change the Session Filter to Favorites.
-- Press refresh, and then you should see your server and be able to join.
+- In the _Steam client_ (not the ARK game) under _View_ (top navigation) > _Servers_, click the _Favorites_ tab.
+- Add your server by clicking _Add A Server_, then entering your server address into the popup box and clicking _Add This Address To Favorites_.
+- Open the game ARK and click _Join ARK_.
+- In the bottom left corner under the filter options, _change the Session Filter to Favorites_.
+- Press _refresh_, and then you should see your server and be able to join.
 
 ### ARK Server Troubleshooting
 
