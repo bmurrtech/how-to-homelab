@@ -493,6 +493,12 @@ sudo apt-get install steamcmd
 su - steam
 ```
 
+- __Make a link__ from `/user/steam/steamcmd` to /home/steam/:
+
+```
+ln -s /usr/games/steamcmd steamcmd
+```
+
 - Download and install the ARK game server from Steam:
 
 ```
@@ -505,11 +511,6 @@ steamcmd +login anonymous +force_install_dir /home/steam/arkserver +app_update 3
 This `systemd` file will make the ARK server start automatically on boot.
 
 - First, __login as an admin user__ (required for `sudo` to work when creating a `service.file`).
-- __Make a link__ from `/user/steam/steamcmd` to /home/steam/:
-
-```
-ln -s /usr/games/steamcmd steamcmd
-```
 
 > Note: After running this command, you should see a new directory in `/home/steam/arkserver` called `steamcmd`
 
