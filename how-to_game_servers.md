@@ -51,7 +51,7 @@ bash <(curl -s https://pterodactyl-installer.se)
 
 - Choose to install both the __panel__ and __wings__ by entering __2__.
 - Enter two separate, preferred usernames and passwords for both the panel access and the admin account (this will be used to access the Pterodactyl web UI in a moment).
-- Enter you time zone (ex. `America/Chicago`, `America/New_york")
+- Enter you time zone (ex. `America/Chicago`, `America/New_York`)
 - Enter your FQDN for the panel.
 
 > If you don't know what an FQDN is, use your server's public IP address or create `A` name records pointing to your server's public IP address (ex. Type: A, Name: panel, Conent: [serverIP], Proxy status: DNS only/off, TTL: 1min).
@@ -617,7 +617,7 @@ ServerAdminPassword=YourServerAdminPassword
 
 #### ARK on Steam Games
 - In the _Steam client_ (not the ARK game) under _View_ (top navigation) > _Servers_, click the _Favorites_ tab.
-- Add your server by clicking _Add A Server_, then entering your server address into the popup box and clicking _Add This Address To Favorites_.
+- Add your server by clicking _Add A Server_, then entering your server address `[SEVER_IP:25017]` into the popup box and clicking _Add This Address To Favorites_.
 - Open the game ARK and click _Join ARK_.
 - In the bottom left corner under the filter options, _change the Session Filter to Favorites_.
 - Press _refresh_, and then you should see your server and be able to join.
