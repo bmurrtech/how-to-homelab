@@ -11,7 +11,7 @@ See MikeRoyal's [Master HomeLab Guide](https://github.com/mikeroyal/Self-Hosting
   - [ ] [OBS screen capture](https://resources.antmedia.io/docs/simulcasting-to-social-media-channels) and also see [this](https://medium.com/@khan_honney/webrtc-replay-from-obs-hosted-rtmp-stream-b995d168497)
   - [ ] Stream to [Ant Media Server](https://github.com/bmurrtech/mind-dump/blob/main/rtsp_rss_feed.md)
   - [ ] Upload [stream to YouTube](https://resources.antmedia.io/docs/simulcasting-to-social-media-channels) for 24/7 RSS and stock ticker
-- [ ] Create HA Kubernetes cluster via Ansible playbook; [see Techno Tim's doc](https://docs.technotim.live/posts/k3s-etcd-ansible/)
+- [x] Create HA Kubernetes cluster via Ansible playbook; [see Techno Tim's doc](https://docs.technotim.live/posts/k3s-etcd-ansible/)
 - [ ] [Install Rancher on top of Kubernetes cluster](https://ranchermanager.docs.rancher.com/v2.5/pages-for-subheaders/install-upgrade-on-a-kubernetes-cluster)
 - [ ] Build Docker containers via Rancher w/K3S to run all the following web apps:
   - [ ] Secure network access via [TailScale](https://tailscale.com/kb/1039/install-ubuntu-2004/)
@@ -20,17 +20,17 @@ See MikeRoyal's [Master HomeLab Guide](https://github.com/mikeroyal/Self-Hosting
     - [ ] [VPNs](https://perfectmediaserver.com/remote-access/vpns/)
     - [ ] [Kemp Loadmaster](https://github.com/bmurrtech/my-road-to-tech-job-in-22-days#kemp-loadmaster)
   - [ ] VNC Remote Access to Homelab apps via [Guacamole}(https://www.youtube.com/watch?v=gsvS2M5knOw)
-  - [ ] Create a validating, recursive, caching DNS resolver fpr home network
-    - [ ] Create [Unbound DNS Server](https://unbound.docs.nlnetlabs.nl/en/latest/use-cases/home-resolver.html)
-    - [ ] [Configure clients](https://stevessmarthomeguide.com/home-network-dns-dnsmasq/) to local Unbound DNS
+  - [x] Create a validating, recursive, caching DNS resolver fpr home network
+    - [x] Create [Unbound DNS Server](https://unbound.docs.nlnetlabs.nl/en/latest/use-cases/home-resolver.html)
+    - [x] [Configure clients](https://stevessmarthomeguide.com/home-network-dns-dnsmasq/) to local Unbound DNS
   - [ ] Setup [Cloudron](https://www.cloudron.io/store/index.html) free account
     - [ ] See [a list of Remote Access methods](https://github.com/mikeroyal/Self-Hosting-Guide#Remote-Access)
-  - [ ] [Cybersecurity](https://github.com/bmurrtech/0-100-days-cloud-engineer/blob/main/home_network_cybersecurity.md) steps to secure homelab.
+  - [x] [Cybersecurity](https://github.com/bmurrtech/0-100-days-cloud-engineer/blob/main/home_network_cybersecurity.md) steps to secure homelab.
     - [ ] SSO Authelia Setup
-  - [ ] Pterodactyl + Docker [game server](https://docs.technotim.live/posts/pterodactyl-game-server/)
+  - [x] Pterodactyl + Docker [game server](https://docs.technotim.live/posts/pterodactyl-game-server/)
   - [ ] Homer (interface for NAS)
   - [ ] [ownCloud](https://owncloud.com/pricing/) - self-hosted cloud with mobile apps; [see support docs](https://owncloud.com/docs-guides/)
-  - [ ] Backup software for Windows/Mac and more via [BackupPC](https://github.com/backuppc/backuppc) or [Kopia](https://kopia.io/)
+  - [x] Backup software for Windows/Mac and more via [BackupPC](https://github.com/backuppc/backuppc) or [Kopia](https://kopia.io/)
   - [ ] [PhotoSync for iOS](https://www.photosync-app.com/home.html)
   - [ ] Build HTML Website using [Hugo](https://gohugo.io/getting-started/quick-start/) or [Kopage](https://www.kopage.com/tour)
     - [ ] View Hugo [themes](https://themes.gohugo.io/)
@@ -43,8 +43,8 @@ See MikeRoyal's [Master HomeLab Guide](https://github.com/mikeroyal/Self-Hosting
   - [ ] Jakcett (torrent tracker) + Sonarr & Radarr
   - [ ] PhotoPrism - The iPhone Photo Killer (set up automation in WebDav to auto-upload)
   - [ ] BitWarden | run [VaultWarden - open-source compatible server](https://github.com/dani-garcia/vaultwarden)
-  - [ ] PiHole (VPN into home network, local DNS server, recursive DNS resolver, run Unbound)
-  - [ ] pfSense (VLANs, cybersecurity, port-forwarding)
+  - [x] PiHole (VPN into home network, local DNS server, recursive DNS resolver, run Unbound)
+  - [x] pfSense (VLANs, cybersecurity, port-forwarding)
   - [ ] HomeAssistant (for home automation)
   - [ ] [Paperless-ngx](https://docs.paperless-ngx.com/) - open-sorce document managment system that transforms physical documents into a searchable online archive. Can install via Cloudron.
 - [ ] Pi-KVM (video-capture of home server: HDMI capture card + Raspberry Pi)
