@@ -15,6 +15,7 @@ This guide will show you how create the __ultimate__ Proxmox hypervisor with:
 - [Setup GPU / PCI Card Passthrough](#pcie-gpu-passthrough)
 - [Create Windows VM](#windows-proxmox-install)
 - [Pihole Proxmox Setup](#pihole-proxmox-install)
+- [How to Transfer Files to Linux Server](#filezilla)
 - [TrueNAS Scale](#truenas-scale)
 - [Portainer Setup](#portainer)
 - [Plex Media Server](#plex)
@@ -302,7 +303,8 @@ qm clone 8000 [new_vm_id] --name [vm_name]
 qm set [new_vm_id] --sshkey ~/.ssh/id_rsa.pub
 ```
 
-#### Transfer Files via SFTP using FileZilla
+# FileZilla
+
 See [FileZilla's How-to](https://wiki.filezilla-project.org/Howto) for more details.
 - Download FileZilla and run it.
 - Navigate to File (top left tab) > Site Manager.
@@ -313,6 +315,21 @@ See [FileZilla's How-to](https://wiki.filezilla-project.org/Howto) for more deta
 
 ![sftp_filezilla](https://i.imgur.com/raDY9mj.png)
 
+### Troubleshooting "open for write: permission denied" error
+
+If you get "file transfer failed", then you may not have perms properly configured. If this happens, you need to perform two actions:
+
+- 1) grant sudo perms to the user with folder access. As `root` run the following:
+```
+usermod -aG sudo <username>
+```
+- 2) Add perms to allow file transfers
+```
+sudo chmod 777 </to/the/folder/path>
+```
+- 3) Now, retry to transfer files to that specified folder path
+ 
+  
 # Remote Access
 If you want to securely access and work on your Proxmox hypervisor on-the-go, there's Cloudflare and Tailscale to make this possible. 
 
