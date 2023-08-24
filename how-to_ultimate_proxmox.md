@@ -329,7 +329,11 @@ sudo chmod 777 </to/the/folder/path>
 ```
 - 3) Now, retry to transfer files to that specified folder path
  
-  
+- 4) Lastly, you could get an ownership execution issue (if transferring files by another user). If that's the case, you'll want to change ownership of files with `sudo` user running the following command:
+
+```
+chown -R <username>:<repeat_same_username> /path/to/folder/
+```
 # Remote Access
 If you want to securely access and work on your Proxmox hypervisor on-the-go, there's Cloudflare and Tailscale to make this possible. 
 
