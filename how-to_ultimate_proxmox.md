@@ -196,6 +196,10 @@ Ubuntu __20.04__ LTS
 ```
 wget https://cloud-images.ubuntu.com/daily/server/focal/current/focal-server-cloudimg-amd64.img
 ```
+Ubuntu __22.04__ LTS
+```
+wget https://cloud-images.ubuntu.com/daily/server/jammy/current/jammy-server-cloudimg-amd64.img
+```
 
 - Wait for the image to download to your Proxmox server. Next, we need to run the following command to create a virtual machine and attach that image to this VM:  
 ```
