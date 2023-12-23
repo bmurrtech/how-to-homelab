@@ -13,9 +13,15 @@ This work is licensed under a
 [cc-by-nc-sa-image]: https://licensebuttons.net/l/by-nc-sa/4.0/88x31.png
 [cc-by-nc-sa-shield]: https://img.shields.io/badge/License-CC%20BY--NC--SA%204.0-lightgrey.svg
 
+# Acknowledgements
+- Ben Heater's OG pfSense VLAN guide was immensley helpful. Go check out [Ben's other great guides](https://benheater.com/) no his website! 
+- BobCares website to [force a DHCP release](https://bobcares.com/blog/force-dhcp-client-to-renew-ip-address/) came in handy! I guess Bob really does care.
+
 # Table of Contents
-- [Install pfSense VM](#install-pfsense)
-- [Setup VLANs](#configure-proxmox-nics)
+- [Provisioning pfSense VM](#provisioning-pfsense)
+- [Setup VLANs in Proxmox](#configure-proxmox-nics)
+- [Setup VLANs in pfSense](#pfsense-configurations)
+- [Deploy & Configure pfSense](#install-pfsense)
 
 # How-to Guide about the PfSense firewall
 Why you want a pfSense firewall:
@@ -25,7 +31,7 @@ Why you want a pfSense firewall:
 
 This guide will teach you how to seperate (VLAN) your VMs from your home/prodcution network so you can stop attackers/guests/gaming-buddies from moving laterally in your network and viewing/accessing/infecting/compromising other machines on the same network.
 
-### Install pfSense
+### Provisioning pfSense
 
 > For reference, see [pfSense's install guide](https://docs.netgate.com/pfsense/en/latest/install/download-installer-image.html).
 - Download a pfSense ```.iso``` from the official site: https://www.pfsense.org/download/
@@ -132,3 +138,160 @@ ifreload -a
 ```
 
 This will restore the original, functional network configurations to that you _should_ be able to access your Proxmox web UI again from another computer on the network just as before.
+
+## Deploy pfSense
+
+### pfSense Proxmox Conigurations
+- Select the pfSense VM > __Options > OS Type > Edit (button) > Select "other"__
+![pfsensexproxmox_opt_config](https://i.imgur.com/eJiiC92.png)
+
+### Ensure your pfSense VM has a staticly assigned IP address from your router:
+If the IP address of the DHCP server (usually assigned by your router) changes, you will have issues. To mitigate this problem:
+- access your router settings to change the DHCP server settings (usually in LAN > DHCP Server > Mannual IP Assignment)
+- identify your pfSense VM's __WAN__ IP/MAC address (usually assigned by DHCP dynamically),
+- change it to a static IP,
+- then apply the settings in your router.
+
+![pfsense_mac_address](https://i.imgur.com/vdWeoFA.png)
+
+### Add the vmbr1 NIC to the pfSense VM
+The following action adds the pfSense internal switch NIC created earlier to the pfSense VM. Once the VM is stopped, you can add the secondary NIC we made before.
+- Proxmox Node > pfSense VM > __Hardware > Add (button) > Network Device__ > Bridge: `vmbr1`
+
+![vmbr1_NIC_add](https://i.imgur.com/XixvZFz.png)
+
+> Note: If you get the following error, then reboot your Proxmox machine and try to launch the pfSense VM again.
+> ![VM_start_error](https://i.imgur.com/WF782h0.png)
+
+### Start the pfSense VM to begin the setup:
+
+- Click on the VM > __Start__ (button, top right) 
+- Open a console or `ssh` session to the pfSense
+- Wait for the intiial load screen
+- Hit `Enter` to accept the terms
+
+![accept_pfsense_terms](https://i.imgur.com/WlM8hBh.png)
+
+- Progress through the GUI installer
+
+![install_pfsense_GUI](https://i.imgur.com/QfYn7bs.png)
+
+> Note: You may need to enter the advance disk settings to create a mount point if the auto installer method fails. Format as `MBR`, create a partition, then use the auto installer thereafter.
+
+### Interface Setup
+
+- When prompted to setup VLANs, enter `n` for now.
+- Enter the __WAN interface__ name (enter what is provided in the prompt;for me it was `vtnet0`), and do not use the auto-detection `a` as it will fail.
+- When prompted to enter a 2nd NIC for the __LAN interface__ type: `vtnet1`
+- Type `y` to proceed.
+
+![pfsense_install_wizard1](https://i.imgur.com/yfncxX3.png)
+
+- After the installer runs, you should come to an end screen, you should see the WAN and LAN and an IP address to the web UI for pfSense.
+
+![pfsense_end_install_screen](https://i.imgur.com/jLj9gQH.png)
+
+- Take note of the IP that was assigned (or statically set) by the DHCP Server. _This IP is how you will access the pfSense web UI later._ Does it match what you assigned? If not, you may need to renew the IP.
+
+> Note: You may need to manually __invoke a ```dhclient -r <interface>```__ command from the shell of the VM __and reboot the VM__ in order to get the static IP to apply. If you don't know what the interface is on your VM, simply run ```nmcli con``` to get the name of the interface.
+
+### Configure VLANs
+
+- Start the pfSense VM
+- Select option `1` to assing the new NIC and setup VLANs
+![](https://i.imgur.com/bt1eFtr.png)
+
+1. __Should VLANs be setup now [y|n]__
+  - Enter `Y`
+2. __Enter the parent interface name for the new VLAN__
+  - Enter `vtnet1` (vtnet1 is the LAN interface)
+    - Enter tag `666`
+- Enter `vtnet1` (again)
+    - Enter `999`
+3. Press `Enter` to complete the VLAN setup
+
+> You should come this screen in the VLAN setup stage:
+> ![progressofvlan](https://i.imgur.com/3ja9EMq.png)
+
+4. __Enter the parent interface for the new VLAN__
+  - Enter the __WAN__ interface name which is: `vtnet0`
+5. Enter the __LAN__ interface
+  - Enter `vtnet1`
+6. Enter the __Optional 1 interface__
+  - Enter `vtnet1.666`
+7. Enter the __Optional 2 interface__
+  - Enter `vtnet1.999`.
+> If configured corretly, you should see a screen like this:
+>![progressofvlan2](https://i.imgur.com/r76oCgo.png)
+6. Do you want to proceed?
+  - Enter `Y`
+- Wait for additional setup steps to complete
+
+> Special thanks to Ben Heater for these excellently defined steps in [his guide](https://benheater.com/proxmox-lab-pfsense-firewall/). Thanks, Ben!
+
+### Configure LAN IP Range 10.0.0.11
+- Enter `2` at the pfSense config screen to change the LAN IP range from the default.
+![lanipconfig](https://i.imgur.com/bT0Vo81.png)
+- Configure IPv4 address LAN interface via DHCP? (y/n)
+    - Enter `n`
+- Enter the new IPv4 address as: `10.0.0.11`
+    - Enter `24`
+    - Press `Enter` (for LAN)
+- Configure IPv6 address LAN interface via DHCP6? (y/n)
+    - Enter `n`
+- Enter the new LAN IPv6 address. Press `Enter` for none.
+- Do you want to enable the DHCP server on LAN? (y/n)
+    - Enter `y`
+    - Start of range: 10.0.0.11
+    - End of range: 10.0.0.244
+- Do you want to revert to HTTP?
+    - Enter `n`
+    - Press `Enter` to complete
+
+ ### Configure LAN IP Range 10.6.6.11
+- Enter `2` at the pfSense config screen to change the LAN IP range from the default.
+![lanipconfig](https://i.imgur.com/bT0Vo81.png)
+- Configure IPv4 address LAN interface via DHCP? (y/n)
+    - Enter `n`
+- Enter the new IPv4 address as: `10.0.0.11`
+    - Enter `24`
+    - Press `Enter` (for LAN)
+- Configure IPv6 address LAN interface via DHCP6? (y/n)
+    - Enter `n`
+- Enter the new LAN IPv6 address. Press `Enter` for none.
+- Do you want to enable the DHCP server on LAN? (y/n)
+    - Enter `y`
+    - Start of range: 10.0.0.11
+    - End of range: 10.0.0.244
+- Do you want to revert to HTTP?
+    - Enter `n`
+    - Press `Enter` to complete
+
+ ### Configure LAN IP Range 10.9.9.11
+- Enter `2` at the pfSense config screen to change the LAN IP range from the default.
+![lanipconfig](https://i.imgur.com/bT0Vo81.png)
+- Configure IPv4 address LAN interface via DHCP? (y/n)
+    - Enter `n`
+- Enter the new IPv4 address as: `10.0.0.11`
+    - Enter `24`
+    - Press `Enter` (for LAN)
+- Configure IPv6 address LAN interface via DHCP6? (y/n)
+    - Enter `n`
+- Enter the new LAN IPv6 address. Press `Enter` for none.
+- Do you want to enable the DHCP server on LAN? (y/n)
+    - Enter `y`
+    - Start of range: 10.0.0.11
+    - End of range: 10.0.0.244
+- Do you want to revert to HTTP?
+    - Enter `n`
+    - Press `Enter` to complete
+
+### Add Other VLANs
+
+- Repeat the steps to create a new NIC (i.e `vmbr2`, `vmbr3`, VLAN tag `300`, VLAN tag `400`, etc.) in Proxmox
+-  Repeat the Configure LAN IP Range for the new VLAN (i.e. "OPT3 > 10.3.3.11, OPT4 10.4.4.11, etc.)
+
+### Troubleshooting pfSense CLI Config
+If something goes wrong or the prompts do not match this guide, simply select option `4` at the main prompt screen to restore factory defaults and start over.
+
+![](https://i.imgur.com/bt1eFtr.png)
