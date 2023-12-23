@@ -14,8 +14,8 @@ This work is licensed under a
 [cc-by-nc-sa-shield]: https://img.shields.io/badge/License-CC%20BY--NC--SA%204.0-lightgrey.svg
 
 # Table of Contents
-- [Install PfSense VM](###install-pfesense)
-- [Setup VLANs](###configure-proxmox-nics)
+- [Install PfSense VM](#install-pfsense)
+- [Setup VLANs](#configure-proxmox-nics)
 
 # How-to Guide about the PfSense firewall
 Why you want a PfSense firewall:
@@ -50,3 +50,37 @@ This guide will teach you how to seperate (VLAN) your VMs from your home/prodcut
 
 ### Configure Proxmox NICs
 To leverage PfSense VLANs we need to configure Proxmox NICs and assign VLAN tags which will be passed through to the PfSense firewall VM.
+
+- Install network dependencies on the Proxmox node: Select Proxmox node > Shell (button) > copy and paste the following:
+
+```pash
+apt clean && apt update
+apt install ifupdown2 openvswitch-switch -y
+```
+
+- Backup your network interface (in case something goes wrong).
+
+```bash
+cp /etc/network/interfaces /etc/network/interfaces.bak
+```
+
+![interfaces_bak](https://i.imgur.com/hIOktIa.png)
+
+> Backup Note: You can always restore the original configuration by overwritting the ```interfaces``` file with your backup ```interfaces.bak``` file.
+- Click on your __Proxmox Node > Network__. Select ```vmbr0``` and choose __Remove__.
+
+![remove_linux_bridge](https://i.imgur.com/pDyX8PE.png)
+
+- Create open vSwtiches: __Create > OVS Bridge > Bridge ports__: ```<your physical eth interface>```
+
+![ovsbridge1](https://i.imgur.com/3hfa4to.png)
+
+- Fill in the fields as seen in the screenshot below and click __Create__.
+
+![ovsbridge2](https://i.imgur.com/2pmnSVI.png)
+
+>  __Note__: Your physical interface will likely be different than mine. Therefore you MUST enter YOUR physical interface name instead. To get your interface name, open a shell to the Proxmox node and enter ```ip addr``` and it will list the interface(s).
+
+![interfacename](https://i.imgur.com/ZQWSHMQ.png)
+
+- Create the management interface for the Proxmox UI: __Create > OVS IntPort__.
