@@ -20,8 +20,8 @@ This work is licensed under a
 # Table of Contents
 - [Provisioning pfSense VM](#provisioning-pfsense)
 - [Setup VLANs in Proxmox](#configure-proxmox-nics)
-- [Setup VLANs in pfSense](#pfsense-configurations)
-- [Deploy & Configure pfSense](#install-pfsense)
+- [Deploy pfSense](#deploy-pfsense)
+- [Configure pfSense](#configure-vlans)
 
 # How-to Guide about the PfSense firewall
 Why you want a pfSense firewall:
@@ -229,12 +229,35 @@ The following action adds the pfSense internal switch NIC created earlier to the
 
 > Special thanks to Ben Heater for these excellently defined steps in [his guide](https://benheater.com/proxmox-lab-pfsense-firewall/). Thanks, Ben!
 
-### Configure LAN IP Range 10.0.0.11
+### Configure LAN IP Range 10.0.0.1
 - Enter `2` at the pfSense config screen to change the LAN IP range from the default.
 ![lanipconfig](https://i.imgur.com/bT0Vo81.png)
+- Select the interface you wish to configure the IP range.
 - Configure IPv4 address LAN interface via DHCP? (y/n)
     - Enter `n`
-- Enter the new IPv4 address as: `10.0.0.11`
+- Enter the new IPv4 address as: `10.0.0.1`
+    - Enter `24`
+    - Press `Enter` (for LAN)
+- Configure IPv6 address LAN interface via DHCP6? (y/n)
+    - Enter `n`
+- Enter the new LAN IPv6 address. Press `Enter` for none.
+- Do you want to enable the DHCP server on LAN? (y/n)
+    - Enter `y`
+    - Start of range: 10.0.0.11
+    - End of range: 10.0.0.244
+- Do you want to revert to HTTP?
+    - Enter `n`
+    - Press `Enter` to complete
+- You should see an output that reflects the changes made that looks similar to this:
+![iprangeconfigured](https://i.imgur.com/zDRamzn.png)
+
+ ### Configure LAN IP Range 10.6.6.1
+- Enter `2` at the pfSense config screen to change the LAN IP range from the default.
+![lanipconfig](https://i.imgur.com/bT0Vo81.png)
+- Select the interface you wish to configure the IP range.
+- Configure IPv4 address LAN interface via DHCP? (y/n)
+    - Enter `n`
+- Enter the new IPv4 address as: `10.6.6.1`
     - Enter `24`
     - Press `Enter` (for LAN)
 - Configure IPv6 address LAN interface via DHCP6? (y/n)
@@ -248,12 +271,13 @@ The following action adds the pfSense internal switch NIC created earlier to the
     - Enter `n`
     - Press `Enter` to complete
 
- ### Configure LAN IP Range 10.6.6.11
+ ### Configure LAN IP Range 10.9.9.1
 - Enter `2` at the pfSense config screen to change the LAN IP range from the default.
 ![lanipconfig](https://i.imgur.com/bT0Vo81.png)
+- Select the interface you wish to configure the IP range.
 - Configure IPv4 address LAN interface via DHCP? (y/n)
     - Enter `n`
-- Enter the new IPv4 address as: `10.0.0.11`
+- Enter the new IPv4 address as: `10.9.9.1`
     - Enter `24`
     - Press `Enter` (for LAN)
 - Configure IPv6 address LAN interface via DHCP6? (y/n)
@@ -267,31 +291,41 @@ The following action adds the pfSense internal switch NIC created earlier to the
     - Enter `n`
     - Press `Enter` to complete
 
- ### Configure LAN IP Range 10.9.9.11
-- Enter `2` at the pfSense config screen to change the LAN IP range from the default.
-![lanipconfig](https://i.imgur.com/bT0Vo81.png)
-- Configure IPv4 address LAN interface via DHCP? (y/n)
-    - Enter `n`
-- Enter the new IPv4 address as: `10.0.0.11`
-    - Enter `24`
-    - Press `Enter` (for LAN)
-- Configure IPv6 address LAN interface via DHCP6? (y/n)
-    - Enter `n`
-- Enter the new LAN IPv6 address. Press `Enter` for none.
-- Do you want to enable the DHCP server on LAN? (y/n)
-    - Enter `y`
-    - Start of range: 10.0.0.11
-    - End of range: 10.0.0.244
-- Do you want to revert to HTTP?
-    - Enter `n`
-    - Press `Enter` to complete
+### pfSense Config Summary
+After completing the intial pfSense configuration via CLI, you should see a result as shown in the screenshot below: 
+![pfsenseconfigsummary](https://i.imgur.com/LUisItB.png)
 
 ### Add Other VLANs
 
 - Repeat the steps to create a new NIC (i.e `vmbr2`, `vmbr3`, VLAN tag `300`, VLAN tag `400`, etc.) in Proxmox
 -  Repeat the Configure LAN IP Range for the new VLAN (i.e. "OPT3 > 10.3.3.11, OPT4 10.4.4.11, etc.)
 
+### Enable web UI access to pfSense
+- From the pfSense UI, enter `8` and type in `pfctl -d` to enable the pfSense web UI access needed to change other settings using the GUI instead of CLI.
+![pfsensewebuienable](https://i.imgur.com/i68Kbtu.png)
+
+> Note: A reboot will cause the web UI to revert to defaults and you'll have to repeat this step after a reboot to regain access to the web GUI again. Ben Heater explains on [his website](https://benheater.com/proxmox-lab-pfsense-firewall/): "pfSense is blocking WAN access to the web console. This is a good thing if your pfSense router is sitting at the edge of your network. You wouldn't want any body to be able to reach the login page of your home router from the internet. In reality, the IP address on the WAN port is a private IP address – which is not accessible from the Internet without some workarounds. So, _in this case, it's perfectly safe to open the WAN port inside our home network_."
+
+### Access the web GUI
+- Enter the IP address you assigned in the DHCP Server in the URL address (ex. http://192.168.1.24).
+- If you encounter a screen in your browser that warns you about your connection not being private, ignore it and proceed (to unsafe), it's safe because it's your pfSense router on your network.
+- Enter the default credentials: `admin` (username) and `pfsense` (password)
+- Enter a host name: `<name>-<name>` (ex. pfsense-fw)
+- Enter a domain name: `<name>.<name> (ex. pf.range)
+
+![hostnamedomainname](https://i.imgur.com/7It6Wiz.png)
+
+- If you use a DNS resolver you wish pfSense to use, check the `Override DNS`, if not, enter a DNS resolver of your choice. 
+- NPT Server: set the __timezone__ and click next to accept the default. 
+- Set the DHCP Hostname to the name you assigned and uncheck the `Block RFC1918 Private Networks` since we want to allow private IPs through the WAN, not block them.
+
+![](https://i.imgur.com/WespfwB.png)
+
+- Skip the LAN interfance config since we already configured it prior.
+- __Important__: Change the default admin password!
+- Click `Reload` and then `Finish` to complete the wizard. This will reboot the VM and you'll lose connect to the web GUI.
+
 ### Troubleshooting pfSense CLI Config
 If something goes wrong or the prompts do not match this guide, simply select option `4` at the main prompt screen to restore factory defaults and start over.
 
-![](https://i.imgur.com/bt1eFtr.png)
+![troubleshootingpfsensecliconfig](https://i.imgur.com/bt1eFtr.png)
