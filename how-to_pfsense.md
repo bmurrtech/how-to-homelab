@@ -297,7 +297,7 @@ After completing the intial pfSense configuration via CLI, you should see a resu
 
 ### Add Other VLANs
 
-- Repeat the steps to create a new NIC (i.e `vmbr2`, `vmbr3`, VLAN tag `300`, VLAN tag `400`, etc.) in Proxmox
+- Repeat the steps to create a new NIC (i.e `vmbr1`, VLAN tag `300`, VLAN tag `400`, etc.) in Proxmox
 -  Repeat the Configure LAN IP Range for the new VLAN (i.e. "OPT3 > 10.3.3.11, OPT4 10.4.4.11, etc.)
 
 ### Enable web UI access to pfSense
@@ -323,7 +323,19 @@ After completing the intial pfSense configuration via CLI, you should see a resu
 
 - Skip the LAN interfance config since we already configured it prior.
 - __Important__: Change the default admin password!
-- Click `Reload` and then `Finish` to complete the wizard. This will reboot the VM and you'll lose connect to the web GUI.
+- Click `Reload` and then `Finish` to complete the wizard.
+
+> Note: You'll lose connection to the web GUI and you'll need to run `pfctl -d` in the VM console to access again.
+
+### Edit the WAN rule 
+- Navigate to: __Firewall > Rules > WAN__
+![wanruleedit1](https://i.imgur.com/7AIAM5h.png)
+
+- Add the following firewall settings:
+
+![wanruleedit2](https://i.imgur.com/uwcLZpt.png)
+
+- __Save__ and __Apply Changes__
 
 ### Troubleshooting pfSense CLI Config
 If something goes wrong or the prompts do not match this guide, simply select option `4` at the main prompt screen to restore factory defaults and start over.
