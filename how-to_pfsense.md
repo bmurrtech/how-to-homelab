@@ -13,11 +13,21 @@ This work is licensed under a
 [cc-by-nc-sa-image]: https://licensebuttons.net/l/by-nc-sa/4.0/88x31.png
 [cc-by-nc-sa-shield]: https://img.shields.io/badge/License-CC%20BY--NC--SA%204.0-lightgrey.svg
 
+# Table of Contents
+- [Install PfSense VM](###install-pfesense)
+- [Setup VLANs](###configure-proxmox-nics)
+
 # How-to Guide about the PfSense firewall
+Why you want a PfSense firewall:
+- Protect your network.
+- Limit vulnerbilities.
+- Separate VMs from other devices on the network.
+
+This guide will teach you how to seperate (VLAN) your VMs from your home/prodcution network so you can stop attackers/guests/gaming-buddies from moving laterally in your network and viewing/accessing/infecting/compromising other machines on the same network.
 
 ### Install PfSense
 
-> For reference, see PfSense's install guide ![pfsense_install_guide](https://docs.netgate.com/pfsense/en/latest/install/download-installer-image.html)
+> For reference, see [PfSense's install guide](https://docs.netgate.com/pfsense/en/latest/install/download-installer-image.html).
 - Download a PfSense ```.iso``` from the official site: https://www.pfsense.org/download/
 
 > Note: This guide assumes you are deploying the PfSense to a VM in Proxmox; however, if you wish to deploy to a dedicated machine you may wish to download the USB version or burn the ```.iso``` file to a bootable USB instead.
