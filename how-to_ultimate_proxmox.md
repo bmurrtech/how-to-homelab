@@ -238,7 +238,7 @@ qm set 8001 --boot c --bootdisk scsi0
 qm set 8001 --serial0 socket --vga serial0
 # Change SCSI Controller to "VirtIO SCSI"
 # Modify Cloud-Init login from Proxmox UI settings now
-qm template 8002
+qm template 8001
 ```
 
 ### Ubuntu __22.04__ LTS
