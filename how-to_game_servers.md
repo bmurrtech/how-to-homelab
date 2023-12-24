@@ -1,3 +1,18 @@
+### **Any and all copyright materials used are for educational, non-commercial, illustrative (research, criticism, & comment), unpublished purposes only. Facts themselves are not copyrightable.**
+
+### **Any other works of mine are under the Attribution NonCommercial ShareAlike 4.0 International license.**
+
+Shield: [![CC BY-NC-SA 4.0][cc-by-nc-sa-shield]][cc-by-nc-sa]
+
+This work is licensed under a
+[Creative Commons Attribution-NonCommercial-ShareAlike 4.0 International License][cc-by-nc-sa].
+
+[![CC BY-NC-SA 4.0][cc-by-nc-sa-image]][cc-by-nc-sa]
+
+[cc-by-nc-sa]: http://creativecommons.org/licenses/by-nc-sa/4.0/
+[cc-by-nc-sa-image]: https://licensebuttons.net/l/by-nc-sa/4.0/88x31.png
+[cc-by-nc-sa-shield]: https://img.shields.io/badge/License-CC%20BY--NC--SA%204.0-lightgrey.svg
+
 # Table of Contents
 - [How-to Pterodactyl Multi-game Server Manager](#pterodactyl)
 - [How-to Satisfactory Gamer Server](#satisfactory)
@@ -637,10 +652,39 @@ exit
 
 - Now, retry the `systemctl start ark`. If you are still having issues, run a `systemctl status ark.service` and research the specific error message you have on the ARK forums and wiki for solutions.
 
-# Modded Minecraft
-This tutorial assumes you already have an Ubuntu instance ready to go and that you want to run a __1.12.2__ Minecraft Server which requires `Java 8`. If you want to run Minecraft 1.16, then you will need to install a different version of `Java` with the following command: `apt install default-jre`
+# FTB Minecraft Server
+This tutorial assumes that you already have an Ubuntu server VM ready to go -- if not, then [check out my Proxmox guide](https://github.com/bmurrtech/how-to-homelab/blob/main/how-to_ultimate_proxmox.md) on how to create a `cloud-init` template. 
 
-#### Install Java 8
+
+### Provision Server Resources Appropriately
+![ftbgenesis](https://i.imgur.com/P4u6QnB.png)
+
+> As seen above, a FTB Genesis server requirements are at least `4GB` of RAM but reccomended is `6GB`. Check the recc'd servers specs for your server of choice and provision accordingly in [Proxmox](https://github.com/bmurrtech/how-to-homelab/blob/main/how-to_ultimate_proxmox.md). 
+
+### FTB Server Install
+> FTB Server installs are simpler because they provide installers for your CPU and OS of choice. (i.e. `.exe` for Windows and/or `.deb` or `.rpm` file for Linux).
+
+![ftbserverinstallersbyos](https://i.imgur.com/LWuH0o5.png)
+
+- For ref. this guide follos the official FTB Server installer guide: https://feedthebeast.notion.site/Installing-a-Feed-the-Beast-Server-aeaea8a7220945d0ad0357c80c6c9d12
+- Since we are running a Linux Ubuntu OS, we will need to open a terminal to the VM and download (or transfer) the installer to the virtural machine.
+
+#### Option 1: Download Files Directly via `wget`
+- As pictured above, right click the server file download of choise (depends on your CPU and OS), and enter the following in the console/shell of your VM: `wget https://api.modpacks.ch/public/modpack/120/11425/server/linux` (this assumes you are downloading FTB Genesis for Linux, if you want a different modpack, you'll need to change the URL).
+
+#### Option 2: Transfer Files to VM via File Transfer Protocol
+- Please refer to my FileZilla guide on how to transfer to and from your Linxu VMs [here](https://github.com/bmurrtech/how-to-homelab/blob/main/how-to_ultimate_proxmox.md#filezilla).
+- Once you have set up FileZilla, proceed to run the installer from the console or `ssh` session.
+
+# Minecraft Forge Sever - Vanilla
+> The following guide is to set up a clean `Forge` server install without a server installer (as shown above with FTB).
+
+This guide assumes that:
+
+1. You have a modded server picked out in advance (this matters for what Java version and Forge version you install). In this guide, we are going to create a server for: Minecraft version `<ver>` running `Forge` as the modbase. 
+1. You can modify the `cmdlets` provded to fit your specific version of choice. This guide _should_ work for other versions of Minecraft, `Java`, and `Forge`, but you need to replace all the commands with your-version-specific needs. For example: `apt install default-jre` to install defaults may not work for your version.
+
+### Install Java 8
 - As an admin user, run the following installation commands:
 
 ```
@@ -686,7 +730,7 @@ sudo passwd minecraft
 su - minecraft
 ```
 
-- Now, __create a new directory__ for the `sfserver`
+- Now, __create a new directory__ for the `mcserver`
 
 ```
 cd /opt
@@ -697,6 +741,7 @@ cd modserver
 > If you type `pwd` you should see the file path as follows: `/home/minecraft/modserver` you will need to __copy/input this path__ after you install the `steamcmd` package.
 
 - __Download the Forge Installer__ (necessary for modded Minecraft):
+
 
 
 
