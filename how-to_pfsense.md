@@ -519,7 +519,7 @@ __Firewall > Rules > WAN > Add (down arrow)__
 - Click on the new `OPT#` name to conifigure.
 - Enter a description if you like.
 - Set the IPv4 Configuration Type to `Static IPv4` (no need for IPv6, so leave as "none")
-- For the Static IPv4 Configuration, enter the desired IP range youw want (i.e. 10.1.1.0/24 not 10.1.1.1/24).
+- For the Static IPv4 Configuration, enter the desired IP range youw want (i.e. 10.1.1.1/24 not 10.1.1.0/24).
 - At the bottom of the __Interfaces > <Inteface Name>__ be sure to check the __Block Bogon Networks__ (checkbox).
 
 ### Configure DHCP server over new interface
