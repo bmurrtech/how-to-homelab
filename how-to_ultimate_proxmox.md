@@ -188,32 +188,28 @@ zfs get volsize | refreservation | used <pool>/vm-<vmid>-disk-X
 - Inside this focal cloud folder, you scroll until you find the [focal-server-cloudimg.amd64.img](https://i.imgur.com/XKVAyIP.png) file and then __copy the URL__ and __paste__ it in a note for later (this image will be used as the hardrive of our vitrual machines).
 - Open up the shell or SSH into your Proxmox server, and type `wget` followed by a space and then the that URL link to the cloud `.img` file. Here is a sample of that command:
 
-Ubuntu __18.04__ LTS
+### Ubuntu __18.04__ LTS
 ```
 wget https://cloud-images.ubuntu.com/bionic/current/bionic-server-cloudimg-amd64.img
 ```
-Ubuntu __20.04__ LTS
-```
-wget https://cloud-images.ubuntu.com/daily/server/focal/current/focal-server-cloudimg-amd64.img
-```
-Ubuntu __22.04__ LTS
-```
-wget https://cloud-images.ubuntu.com/daily/server/jammy/current/jammy-server-cloudimg-amd64.img
-```
 
-- Wait for the image to download to your Proxmox server. Next, we need to run the following command to create a virtual machine and attach that image to this VM:  
+- Wait for the image to download to your Proxmox server. Next, we need to run the following command to create a virtual machine and attach that image to this VM:
+
 ```
-qm create 8000 --memory 2048 --name 20.04-server --net0 virtio,bridge=vmbr0
+qm create 8000 --memory 2048 --name 18.04-bionic-server --net0 virtio,bridge=vmbr0
 ```
 > You can always change the name in the GUI, but you can't change the ID: `8000` is the ID of the template. This can be whatever you wish, but I set mine to a high number to distinguish it as a template.
 - If you ran the command successfully, you should now see that VM listed under your Proxmox node, but we aren't finished yet. Next, we to set the disk storage: 
 ```
-qm importdisk 8000 focal-server-cloudimg-amd64.img vm --format qcow2
+qm importdisk 8000 bionic-server-cloudimg-amd64.img vm --format qcow2
 ```
 > Note: You can also upload this ISO to a different storage dataset (i.e. local-lvm). Also, any misspellings or deviations from the precise `img` file name will produce errors. Make sure you type in the right `<source>` name.
+
 - I had issues trying to run the `qm set --scsi0` command, so I suggest using the GUI to assign the Cloud drive to the VM.
 ![gui_scsi](https://i.imgur.com/o4eyart.png)
+
 - To do this, navitagte to: Datacenter > Node > VM ("8000") > Hardware > click on Unused Disk > Edit (button) and select "SCSI" and "0" from the dropdown menus. Do not change any other settings here, and click the _Add_ button. You should now see the unused disk disappear and the [Hard Disk appear in the VM](https://i.imgur.com/p1D3l8l.png).
+
 - Now, we need to create a virtual CD-ROM and attach it to the VM template we created:
 ```
 qm set 8000 -ide2 vm:cloudinit
@@ -228,8 +224,27 @@ qm set 8000 --serial0 socket --vga serial0
 ```
 - Return to the Proxmox GUI > Datacenter > Node > ubuntu-cloud VM > Cloud-init (menu), and you should now see a the cloud icon for this VM.
 
+### Ubuntu __20.04__ LTS
+```
+wget https://cloud-images.ubuntu.com/daily/server/focal/current/focal-server-cloudimg-amd64.img
+qm importdisk 8001 focal-server-cloudimg-amd64.img vm --format qcow2
+qm create 8001 --memory 2048 --name 20.04-focal-server --net0 virtio,bridge=vmbr0
+qm set 8001 -ide2 vm:cloudinit
+qm set 8001 --boot c --bootdisk scsi0
+qm set 8001 --serial0 socket --vga serial0
+```
+### Ubuntu __22.04__ LTS
+```
+wget https://cloud-images.ubuntu.com/daily/server/jammy/current/jammy-server-cloudimg-amd64.img
+qm importdisk 8002 jammy-server-cloudimg-amd64.img vm --format qcow2
+qm create 8002 --memory 2048 --name 22.04-jammy-server --net0 virtio,bridge=vmbr0
+qm set 8002 -ide2 vm:cloudinit
+qm set 8002 --boot c --bootdisk scsi0
+qm set 8002 --serial0 socket --vga serial0
+```
 ![cloud_init_settings](https://i.imgur.com/lukuLXY.png)
 
+### Cloud Init Login Settings
 - Edit the Cloud-init settings as follows:
   - _User_: `admin`
   - _Password_: `<your_password>` (you can modify this later in VM > Cloud-init > Password and then reboot the VM)
@@ -247,12 +262,14 @@ qm set 8000 --serial0 socket --vga serial0
 ![cloud-hardware](https://i.imgur.com/JAX8z1Q.png).
 - Of course, you can play with the default CPU, RAM, and disk space settings, but if anything else looks off, modify the VM to match or delete the VM and start from scratch (it's not that hard).
 - When you are 100% satisfied with the results, right-click the ubuntu-cloud VM and click "Convert to template" or:
+
 ```
 qm template [vm_id]
 ```
+
 - You should see the icon change to a paper icon with a monitor, indicating that it has become a template.
 
-### When WGET Fails
+### Troubleshooting WGET Fail
 
 If you get any of the following errors: "failed: No route to host" or "connect: Network is unreachable", then _you have a network problem_.  First thing to try is a simple ping test to google: `ping google.com`. If the return is "destinaion host unreachable" then your Proxmox hypervisor is unable to reach the internet for some reason. Here's a few things you can do/check:
 - Check that your nameserver is set to the IP gateway of your router (this varies depending on your router, but you can check the label on the routher to see if it lists a default gateway IP address.) Open a shell and type:
@@ -278,7 +295,7 @@ service networking restart
 ![clone_GUI_mode](https://i.imgur.com/RBwBLCy.png)
 - Or via CLI:
 ```
-qm clone 8000 [new_vm_id] --name [vm_name]
+qm clone [server_template_id] [new_vm_id] --name [vm_name]
 ```
 > Note: Disk must be formatted to __QEMU__/__qcow2__ to be able to resize. VMDK format will not work.
 - By default, the VM will not have much hard drive space unless you changed the settings prior to saving this template.
