@@ -530,4 +530,4 @@ __Firewall > Rules > WAN > Add (down arrow)__
 ### Don't forget to add some firewall rules
 - Nav to: __Firewall > Rules > <interface_name>__ to add new rules.
 
-> There are not going to be any rules by default (except if you’re blocking bogon nets). Therefore, it's your call on how you configure the firewall rules. For assistance, I check out [RaidOwl's YouTube video about configuring various firewall rules](https://youtu.be/rHE6MCL4Gz8?si=PGIwjV7275D08xFu&t=260) for some tips.
+> There are not going to be any rules by default (except if you’re blocking bogon nets). Therefore, it's your call on how you configure the firewall rules. For assistance, I check out [RaidOwl's YouTube video about configuring various firewall rules](https://youtu.be/rHE6MCL4Gz8?si=GSpluLibUKUrewvL&t=545) for some tips.
