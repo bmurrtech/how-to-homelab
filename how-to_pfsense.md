@@ -295,6 +295,11 @@ The following action adds the pfSense internal switch NIC created earlier to the
 After completing the intial pfSense configuration via CLI, you should see a result as shown in the screenshot below: 
 ![pfsenseconfigsummary](https://i.imgur.com/LUisItB.png)
 
+### Troubleshooting pfSense CLI Config
+If something goes wrong or the prompts do not match this guide, simply select option `4` at the main prompt screen to restore factory defaults and start over.
+
+![troubleshootingpfsensecliconfig](https://i.imgur.com/bt1eFtr.png)
+
 ### Add Other VLANs
 
 - Repeat the steps to create a new NIC (i.e `vmbr1`, VLAN tag `300`, VLAN tag `400`, etc.) in Proxmox
@@ -327,7 +332,7 @@ After completing the intial pfSense configuration via CLI, you should see a resu
 
 > Note: You'll lose connection to the web GUI and you'll need to run `pfctl -d` in the VM console to access again.
 
-### Edit the WAN rule 
+### Enable web GUI access permantely - add WAN rule 
 - Navigate to: __Firewall > Rules > WAN__
 ![wanruleedit1](https://i.imgur.com/7AIAM5h.png)
 
@@ -337,7 +342,192 @@ After completing the intial pfSense configuration via CLI, you should see a resu
 
 - __Save__ and __Apply Changes__
 
-### Troubleshooting pfSense CLI Config
-If something goes wrong or the prompts do not match this guide, simply select option `4` at the main prompt screen to restore factory defaults and start over.
+### Rename OP1 and OPT2
+What you rename these to is up to you and depends on your purposes, but the goal of this guide is to A) create a separate network from prodcution/home (completed via `vmbr1`) and B) create two VLANs for security sandbox tools that is segragated from 10.0.0.1/24. Therefore, we will name the OPTs accordingly. See below:
 
-![troubleshootingpfsensecliconfig](https://i.imgur.com/bt1eFtr.png)
+- In the pfSense web GUI, navitage to: __Interfaces > Assignments__
+- Click on the cooresponding interface and change the description as follows:
+- Rename `OPT1` to `SEC_EGRESS`
+- Rename `OPT2` to `SEC_ISOLATED`
+
+> If you have other VLAN goals, then change or add new VLAN tags by creating a new `OVS IntPort`in the Proxmox network node. Revisit [NIC Settings](#apply-the-new-nic-settings) to extrapolate.
+
+- `Save` each change and click `Apply Changes` after to submit the changes.
+
+### Create an Alias for `RFC1918`
+The alias serves as an alternate name for all private IPv4 addresses.
+- __Firewall > Aliases > Add__
+- Fill in the fields and add networks as follows:
+
+![rfc1918networks](https://i.imgur.com/lUIkBeH.png)
+
+> If you change the `Type` to `Host(s)` you can assign an static IP in  __Firewall > Aliases > Add__ for the DHCP server to assign.
+
+### Create WAN firewall fules for security lab
+> To allow the home network to reach the internal LAN, we need to set a `Pass` action for all addresses and protocols. This is necessary if we wish to `ssh` or create an `RDP` session to the Kali Linux VM on the `SEC_EGRESS` VLAN.
+
+-  __Firewall > Rules > WAN > Add (down arrow)__
+- Add the following configuration to your WAN rules:
+
+![wanruleforlantalk](https://i.imgur.com/6kh0N0K.png)
+
+- Click `Save`
+
+### Allow WAN net to ping WAN address
+-  __Firewall > Rules > WAN > Add (down arrow)__
+![wanping](https://i.imgur.com/VO0Ed0d.png)
+
+### Block ALL WAN access to `SEC_EGRESS` LAN
+> It's paramount that we do not allow any packets to reach the LAN from the WAN. We only want egress, no ingress.
+
+- Click `Save`
+
+- __Firewall > Rules > WAN > Add (down arrow)__
+
+![blockWANingressonSECegress](https://i.imgur.com/uaaLkis.png)
+
+- And `Save`
+
+### Block ALL WAN ingress to `SEC_ISOLATED`
+> The same impiteous applies to `SEC_ISOLATED` -- we don't want the isolated VLAN to have internet ingress access.
+
+__Firewall > Rules > WAN > Add (down arrow)__
+- Add the following configuration to your WAN rules:
+
+![blockWANingressonSECisolated](https://i.imgur.com/myC8lPG.png)
+
+- Click `Save` on this new rule.
+
+### WAN outcome summary
+> The outcome of the rules shouel read as follows:
+
+![idealWANruleoutcome](https://i.imgur.com/9F0H5NP.png)
+
+> Leave the LAN firewall rules alone. It is good as-is.
+
+### `SEC_EGRESS` rules - allow traffic to local gateway
+> Because `RFC1918` will be blocked in future rules, we can allow the default gateway access to the Internet.
+
+- __Firewall > Rules > `SEC_EGRESS` > Add (up arrow)__
+
+![secegress1](https://i.imgur.com/cXq0Pb8.png)
+
+- Add the following rules:
+
+![](https://i.imgur.com/lZ80dKh.png)
+
+- `Save`
+
+### Create `Kali1` alias host
+- Navitgate to __Firewall > Aliases > IP > Add__
+- Enter the following details to create the `Kali1` alias:
+
+![](https://i.imgur.com/60ylsXZ.png)
+
+- `Save` the alias.
+- `Apply Changes`
+
+![applykali1changes](https://i.imgur.com/uGgrZio.png)
+
+### Allow packets to Kali malware lab analysis
+
+- __Firewall > Rules > `SEC_EGRESS` > Add (DOWN arrow)__
+- Create the following rules for for the `Kali1` VM to access the `SEC_EGRESS` VLAN:
+
+![rulesforsecegresstoakali](https://i.imgur.com/tbZpJTz.png)
+
+- `Save` the rules.
+- If you get an error, check the name you created the for the Kali VM matches what you enterd.
+
+![kalivmnotfound](https://i.imgur.com/b3u41WT.png)
+
+### Allow packets to Internet (for non-private IPs)
+
+- __Firewall > Rules > `SEC_EGRESS` > Add (DOWN arrow)__
+- Add the following rules (make sure to check the "invert match" box):
+
+![invertmatchsecegresshost](https://i.imgur.com/BwNEBsN.png)
+
+### Block everything else for `SEC_EGRESS`
+
+- __Firewall > Rules > `SEC_EGRESS` > Add (DOWN arrow)__
+- Create the following rules:
+
+![blockallthethingsnow](https://i.imgur.com/DHAqjAx.png)
+
+### Check `SEC_EGRESS` final rule state
+- Do your rules match the following?
+
+![finalSECegressstate](https://i.imgur.com/WesC5Bh.png)
+
+- If the rules match, click `Apply Changes`
+
+### `SEC_ISOLATED` rule setup - allow to Kali1
+
+- Navigate to the `SEC_ISOLATED` rules __Firewall > Rules > `SEC_ISOLATED`__
+
+![SEC_ISOLATEDfirewallrules](https://i.imgur.com/m4SDiDH.png)
+
+- Click __Add (UP arrow)__ and input the following rules:
+
+![allowpacketstokali1](https://i.imgur.com/5d8vGDE.png)
+
+- Click `Save`
+
+### Block everything else on `SEC_ISOLATED`
+- __Firewall > Rules > `SEC_EGRESS` > Add (DOWN arrow)__
+- Now to block everything other than `Kali1`
+
+![blockallthethingsnow2](https://i.imgur.com/w17b7bq.png)
+
+> Rules have an order or execution based upon position. If a rule is above, it ignores all other rules BELOW it. In this case, because the block all rule is last, anything before it is allowed. But if I moved the `Kali1` allow rule BELOW the block all rule, `Kali1` couldn't communicate with the `SEC_ISOLATED` hosts.
+
+### Check `SEC_ISOLATED` final rule state
+
+![finalstateofSECisolatedrules](https://i.imgur.com/Q4buCSq.png)
+
+> No "Block Bogon" found? That's becuase you have to check the box at the bottom of the page on __Interfaces > <Inteface Name> > Block Bogon Networks (checkbox)__
+
+![blockthebogonnetwork](https://i.imgur.com/i4wRt4A.png)
+
+- If the rules match, click `Apply Changes`
+
+### Configure DNS Resolver Settings
+- Nav to __Services > DNS Resolver__
+- Check these two boxes for __DHCP Registration__ and __Static DHCP__
+
+![dhcpregandstaticdhcp](https://i.imgur.com/2NibZ6d.png)
+
+- Now, nav to __Advanced Settings__ and ensure that your settings match the following configuration:
+
+![matchadvconfigopts](https://i.imgur.com/MKiW2Jw.png)
+
+### How to add additional VLANs to pfSense
+- Nav to: __Proxmox Node > Network__
+- Add a new VLAN tag to `vmbr1` by: __Create > OVS IntPort__ and select `vmbr1` and enter a new VLAN tag and comment.
+- Apply the by clicking `Apply Configuration` (button)
+- Add the new VLAN to pfSense by accessing the pfSense web GUI (i.e. URL)
+- Nav to: __Interfaces > Assignments > VLANs > Add__
+- Fill in the VLAN Configuration with:
+  - Parent Interface: `vtnet1`
+  - VLAN Tag: `<your VLAN tag number>`
+  - Descritpion (optional)" `<designation comment for your own organizational sanity>`
+- Nav to: __Interface Assignments > Add__ (next to the newly added interface)
+- Click `Save` and you should now see an `OPT#` interfance populate.
+
+### Configure new VLAN interface
+- Click on the new `OPT#` name to conifigure.
+- Enter a description if you like.
+- Set the IPv4 Configuration Type to `Static IPv4` (no need for IPv6, so leave as "none")
+- For the Static IPv4 Configuration, enter the desired IP range youw want (i.e. 10.1.1.0/24 not 10.1.1.1/24).
+- At the bottom of the __Interfaces > <Inteface Name>__ be sure to check the __Block Bogon Networks__ (checkbox).
+
+### Configure DHCP server over new interface
+- Nav to: __Services > DHCP Server > <interface_name> > Enable__
+- Set the desire IP range (i.e. 10.1.1.11 - 10.1.1.244)
+- Hit `Save` and `Apply Changes` if you are happy with it.
+
+### Don't forget to add some firewall rules
+- Nav to: __Firewall > Rules > <interface_name>__ to add new rules.
+
+> There are not going to be any rules by default (except if you’re blocking bogon nets). Therefore, it's your call on how you configure the firewall rules. For assistance, I check out [RaidOwl's YouTube video about configuring various firewall rules](https://youtu.be/rHE6MCL4Gz8?si=PGIwjV7275D08xFu&t=260) for some tips.
