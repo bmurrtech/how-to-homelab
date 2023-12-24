@@ -198,14 +198,17 @@ wget https://cloud-images.ubuntu.com/bionic/current/bionic-server-cloudimg-amd64
 ```
 qm create 8000 --memory 2048 --name 18.04-bionic-server --net0 virtio,bridge=vmbr0
 ```
-> You can always change the name in the GUI, but you can't change the ID: `8000` is the ID of the template. This can be whatever you wish, but I set mine to a high number to distinguish it as a template.
-- If you ran the command successfully, you should now see that VM listed under your Proxmox node, but we aren't finished yet. Next, we to set the disk storage: 
+> You can always change the name in the GUI, but you can't change the template ID: `8000` is the ID of the template. This can be whatever you wish, but I set mine to a high number to distinguish it as a template.
+
+- If you ran the command successfully, you should now see that VM listed under your Proxmox node, but we aren't finished yet. Next, we to set the disk storage:
+
 ```
 qm importdisk 8000 bionic-server-cloudimg-amd64.img vm --format qcow2
 ```
+
 > Note: You can also upload this ISO to a different storage dataset (i.e. local-lvm). Also, any misspellings or deviations from the precise `img` file name will produce errors. Make sure you type in the right `<source>` name.
 
-- I had issues trying to run the `qm set --scsi0` command, so I suggest using the GUI to assign the Cloud drive to the VM.
+- I had issues trying to run the `qm set <vmid> --scsi0 <your_vm_storage_ID>:<desired_disk_size_in_GB>` (for example: `qm set 8000 --scsi0 vm:10`) wherein it leaves an "Unused Disk 0", so I suggest using the GUI to assign the Cloud drive to the VM.
 ![gui_scsi](https://i.imgur.com/o4eyart.png)
 
 - To do this, navitagte to: Datacenter > Node > VM ("8000") > Hardware > click on Unused Disk > Edit (button) and select "SCSI" and "0" from the dropdown menus. Do not change any other settings here, and click the _Add_ button. You should now see the unused disk disappear and the [Hard Disk appear in the VM](https://i.imgur.com/p1D3l8l.png).
@@ -222,34 +225,47 @@ qm set 8000 --boot c --bootdisk scsi0
 ```
 qm set 8000 --serial0 socket --vga serial0
 ```
-- Return to the Proxmox GUI > Datacenter > Node > ubuntu-cloud VM > Cloud-init (menu), and you should now see a the cloud icon for this VM.
 
 ### Ubuntu __20.04__ LTS
 ```
 wget https://cloud-images.ubuntu.com/daily/server/focal/current/focal-server-cloudimg-amd64.img
-qm importdisk 8001 focal-server-cloudimg-amd64.img vm --format qcow2
 qm create 8001 --memory 2048 --name 20.04-focal-server --net0 virtio,bridge=vmbr0
+qm importdisk 8001 focal-server-cloudimg-amd64.img vm --format qcow2
+# Nav to: Template VM > Hardware > Unused Disk > Set to scsi0
+# [WIP] qm set 8001 --scsi0 vm:10G
 qm set 8001 -ide2 vm:cloudinit
 qm set 8001 --boot c --bootdisk scsi0
 qm set 8001 --serial0 socket --vga serial0
+# Change SCSI Controller to "VirtIO SCSI"
+# Modify Cloud-Init login from Proxmox UI settings now
+qm template 8002
 ```
+
 ### Ubuntu __22.04__ LTS
 ```
 wget https://cloud-images.ubuntu.com/daily/server/jammy/current/jammy-server-cloudimg-amd64.img
-qm importdisk 8002 jammy-server-cloudimg-amd64.img vm --format qcow2
 qm create 8002 --memory 2048 --name 22.04-jammy-server --net0 virtio,bridge=vmbr0
+qm importdisk 8002 jammy-server-cloudimg-amd64.img vm --format qcow2
+# Nav to: Template VM > Hardware > Unused Disk > Set to scsi0
+# [WIP] qm set 8001 --scsi0 vm:10G
 qm set 8002 -ide2 vm:cloudinit
 qm set 8002 --boot c --bootdisk scsi0
 qm set 8002 --serial0 socket --vga serial0
+# Change SCSI Controller to "VirtIO SCSI"
+# Modify Cloud-Init login from Proxmox UI settings now
+qm template 8002
 ```
+
 ![cloud_init_settings](https://i.imgur.com/lukuLXY.png)
 
 ### Cloud Init Login Settings
+- Return to the Proxmox GUI > Datacenter > Node > ubuntu-cloud VM > Cloud-init (menu), and you should now see a the cloud icon for this VM.
 - Edit the Cloud-init settings as follows:
-  - _User_: `admin`
+  - _User_: `<your_username>`
   - _Password_: `<your_password>` (you can modify this later in VM > Cloud-init > Password and then reboot the VM)
   - _Host_: Leave as default or customize to your preference
   - _SSH Public Key_: `ssh-rsa[insert_your_public_SSH_key]`. You can readily find documentation on [how to generate a SSH Public key using PuTTYgen](https://docs.digitalocean.com/products/droplets/how-to/add-ssh-keys/create-with-putty/).
+
 > Proxmox SSH Key ZFS Bug: When attempting to add a public key, I got the following error: _SSH public key validation error (500)_ . As it turns out, [this is a known bug](https://bugzilla.proxmox.com/show_bug.cgi?id=1188), but it does appear to be fixed. _Make sure to select_ Key > __SSH-2 RSA__ > RSA (radio button) when generating your SSH keys _or else it will not work._ Your public key should start with `ssh-rsa`. See example PuTTYGen screenshot below, and don't forget to password protect and save your private key.
 ![ssh_2_RSA](https://i.imgur.com/xbsItrt.png)
   - _IP Config: IPv4_ `DHCP` (radio selector). Note: The default IP value is nothing, so will not get any network access at all by default. Therefore, __you must set it to DHCP__ at or edit the values manually.
@@ -257,6 +273,7 @@ qm set 8002 --serial0 socket --vga serial0
 - Change the SCSI Controller from the default setting to VirtIO SCSI from the Proxmox GUI.
 ![VirtIO_SCSI](https://i.imgur.com/Exs2OAE.png)
 > CAUTION: Do __not__ start the VM. If started, it will be boostrap the machine ID and UUID.
+
 - In the end, you should have a hardware configuration that looks similar to this:
  
 ![cloud-hardware](https://i.imgur.com/JAX8z1Q.png).
