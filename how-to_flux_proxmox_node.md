@@ -1,4 +1,5 @@
-# Create a VM for PfSense
+# Create a VM for PfSense (Optional)
+> For a more robus guide no pfSense, see https://github.com/bmurrtech/how-to-homelab/blob/main/how-to_pfsense.md
 1. Download/upload an .iso of PfSense to the local [pve] disk of the node (click on the node > local [pve]> ISO > search for download under templates or upload the .iso).
 1. Click on the node (i.e. "pve" or whatever you named it when first installing ProxMox).
 1. Click on Network > Create > Linux Bridge.
@@ -41,7 +42,6 @@
 
 > Additional PfSense documentation can be found here: https://docs.netgate.com/pfsense/en/latest/services/dyndns/client.html
 
-
 # Create Cumulus VM template
 
 Click the create VM button and set it as follows:
@@ -52,12 +52,11 @@ Click the create VM button and set it as follows:
 i. 230GB disk space.
 ii. Check "Discard" box.
 iii. Under the "Bandwidth" tab, enter 250MB/s Write limit and 300Mb/s burst limit.
-1. CPU: 4
+1. Choose: 2 physical cores, 1 socket, 4 threads (ref. https://runonflux.io/nodes)
 
-> Note: Socket is the physical slot for a CPU. It matters if, for instance, you need NUMA (allocated RAM per CPU, which speeds up computation).
-Core - is the physical core a CPU has. Here it gets a bit confusing - within Proxmox *the number of cores equals the number of threads*, so if your CPU supports hyper-threading, *the core count is double the physical cores* of the CPU.
+> Note: __Socket__ is the physical slot for a CPU. __Core__ - is the physical core a CPU has. __Threads__ - the logical or vCPU cores. Here it gets a bit confusing - within Proxmox *the number of vCPUs equals the number of threads*, so if your CPU supports hyper-threading, *the core count is double the physical cores* (i.e. 8 physical cores = 16 threads/vCPUs). Proxmox does not have a GUI option to create VMs with multiple threads per vCPU like other KVM hypervisors. However, several vCPUs can use the same physical CPU core because Proxmox will hypervise and spread multiple threads across all the physical CPU cores/threads. Both Intel and AMD hyperthreading provides 2x per core, but you don't get the performance of 2 CPUs for that. If you're looking for guaranteed performance, ignore vCores (the logical cores resulting from hyperthreading) and count just actual cores.
 
-1. Memory: 8192
+1. Memory/RAM: 8192
 1. Finish & create the VM.
 1. Right-click the new VM/node.
 1. Click "Convert to template" and click "Yes" (you should see the icon change).
@@ -74,7 +73,7 @@ Core - is the physical core a CPU has. Here it gets a bit confusing - within Pro
 1. Log in as root (use the password you created).
 1. Install the Cockpit GUI by entering the following command: 
 
-`sudo apt install cockpit` > ENTER > y
+`sudo apt install cockpit` > ENTER > `y`
 
 1. Enter [yourVM_IP_address]:9090 of this VM in a web browser and open Terminal from the navigation menu.
 1. Enable UPnP or manually forward the following ports for this same IP (minus the :9090): 16124 - 16128 (TCP/UDP) and 30000 - 39999 (TCP/UDP)
@@ -116,7 +115,7 @@ v. If prompted to add a KDA address, you need to make one by clicking on your Po
 1. Once the FluxNode is fully up and running, your public IP address to your new FluxNode will be listed. Copy this and paste it in: ZelCore > Portfolio > Wallet > Flux > Details > FluxNodes > Dropdown arrow > Edit > IP (paste it in this field).
 
 1. In your ZelCore wallet, you now need start/enable your FluxNode: ZelCore > Portfolio > Wallet > Flux > Details > FluxNodes > Dropdown arrow > Start.
-1. Lastly, if you wish to access your FluxNode via Cockpit while you are away from you local network, you must enable port 9090 through the firewall. To do this enter:
+1. Lastly, if you wish to access your FluxNode via Cockpit while you are away from you local network, you must enable port `9090` through your firewall (you will also need to allow traffic by port forwarding on your router) . To add a `ufw` allow, enter:
 
 `sudo ufw status` (you should not see port 9090 listed)
 
@@ -125,7 +124,7 @@ v. If prompted to add a KDA address, you need to make one by clicking on your Po
 FIN
 
 # Lock Linux Root Login
--create new user and disable root ssh and ftp login:
+- create new user and disable root ssh and ftp login:
 
 `adduser [username]`
 
@@ -137,20 +136,21 @@ FIN
 
 `vim /etc/passwd`
 
--change the first line to to read "/sbin/nologin" instead of "bin/..." and save the file
+- change the first line to to read "/sbin/nologin" instead of "bin/..." and save the file
 
--change permission to access root altoghther:
+- change permission to access root altoghther:
 
 `vim /etc/ssh/sshd_config`
 
--change the line 34 entry that reads "PermitRootLogin yes" to ""PermitRootLogin no"
+- change the line 34 entry that reads "PermitRootLogin yes" to ""PermitRootLogin no"
 
--save the changes (ESC > : > wq), then restart the ssh services:
+- save the changes (ESC > : > wq), then restart the ssh services:
 
 `systemctl restart sshd`
 
-#Update the default IP interface 
+### Update the default IP interface 
 
+```
 auto vmbr0
 iface vmbr0 inet static
 	address [your_public_ip]
@@ -161,14 +161,17 @@ iface vmbr0 inet static
 	bridge-stp off
 	birdge-fd 0
 
--Install iptables
+```
+
+- Install iptables
 
 `apt-get install iptables-persistent`
 
 `systemctl stop firewalld`
 
--Add the following to `/etc/network/interfaces` (at the bottom):
+- Add the following to `/etc/network/interfaces` (at the bottom):
 
+```
 auto vmbr2
 iface vmbr2 inet static
     address 10.21.21.254
@@ -183,10 +186,12 @@ iface vmbr2 inet static
     post-up iptables -t nat -A PREROUTING -i vmbr0 -p tcp --dport 2222 -j DNAT --to 10.21.21.1:22
     post-down iptables -t nat -D PREROUTING -i vmbr0 -p tcp --dport 2222 -j DNAT --to 10.22.21.1:22
 
--`cd /etc/iptables/`
--rename the `rules.v4` file `mv rules.v4 rules.v4.old` Use FTP to Download and Edit the rules.v4 file
--You can find the file here: /etc/iptables/rules.v4
--Once downloaded, open with text editor and overwrite contents with the following (date/time not needed):
+```
+
+- `cd /etc/iptables/`
+- rename the `rules.v4` file `mv rules.v4 rules.v4.old` Use FTP to Download and Edit the rules.v4 file
+- You can find the file here: /etc/iptables/rules.v4
+- Once downloaded, open with text editor and overwrite contents with the following (date/time not needed):
 
 ```
 # Generated by iptables-save v1.8.7 on Thu Jan 26 22:55:53 2023
