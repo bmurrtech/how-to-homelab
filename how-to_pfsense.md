@@ -22,12 +22,17 @@ This work is licensed under a
 - [Setup VLANs in Proxmox](#configure-proxmox-nics)
 - [Deploy pfSense](#deploy-pfsense)
 - [Configure pfSense](#configure-vlans)
+- [How to add additional VLANs to pfSense](#how-to-add-additional-vlanss-to-pfsense)
+- [Guide to pfSense Rules](#pfsense-firewall-rules)
 
 # How-to Guide about the PfSense firewall
 Why you want a pfSense firewall:
 - Protect your network.
 - Limit vulnerbilities.
 - Separate VMs from other devices on the network.
+- Create a guest or IOT network separate from your home.
+- Create a sandbox environment.
+- Create a malware test lab.
 
 This guide will teach you how to seperate (VLAN) your VMs from your home/prodcution network so you can stop attackers/guests/gaming-buddies from moving laterally in your network and viewing/accessing/infecting/compromising other machines on the same network.
 
@@ -527,7 +532,10 @@ __Firewall > Rules > WAN > Add (down arrow)__
 - Set the desire IP range (i.e. 10.1.1.11 - 10.1.1.244)
 - Hit `Save` and `Apply Changes` if you are happy with it.
 
-### Don't forget to add some firewall rules
+### pfSense Firewall Rules
 - Nav to: __Firewall > Rules > <interface_name>__ to add new rules.
 
-> There are not going to be any rules by default (except if you’re blocking bogon nets). Therefore, it's your call on how you configure the firewall rules. For assistance, I check out [RaidOwl's YouTube video about configuring various firewall rules](https://youtu.be/rHE6MCL4Gz8?si=GSpluLibUKUrewvL&t=545) for some tips.
+> There are not going to be any rules by default (except if you’re blocking bogon nets). Therefore, it's your call on how you configure the firewall rules. For assistance, check out:
+> - [pfSense Firewall Rules That Make Sense](https://www.youtube.com/watch?v=3lJR67AMb9A)
+> - [RaidOwl's YouTube video about configuring various firewall rules](https://youtu.be/rHE6MCL4Gz8?si=GSpluLibUKUrewvL&t=545)
+> - [Speed Proxmox x pfSense VLAN Run Setup](https://www.youtube.com/watch?v=t7qt1wlS9uA)
