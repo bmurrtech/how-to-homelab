@@ -623,7 +623,11 @@ lspci
 - [TechnoTim's Win10 Proxmox Install](https://www.youtube.com/watch?v=6c-6xBkD2J4)
 - Download Windows ISO and _virtIO_.
 - Create a VM (set to Windows)
-- Add a 2nd CD-ROM drive and attach the _virtIO_ drivers.
+- Add a 2nd CD-ROM drive and attach the _virtIO_ drivers
+- Check that your hardware config is the same as below:
+
+![exampleofhardwarewinconfig](https://i.imgur.com/8zqvoxI.png)
+
 - Boot the machine and __select custom install__
 - Click __Load Drivers__ and browser for the following files in that _virtIO_ CD-ROM:
 
