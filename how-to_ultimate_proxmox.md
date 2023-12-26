@@ -237,7 +237,7 @@ qm set 8001 -ide2 vm:cloudinit
 qm set 8001 --boot c --bootdisk scsi0
 qm set 8001 --serial0 socket --vga serial0
 # Change SCSI Controller to "VirtIO SCSI"
-# Modify Cloud-Init login from Proxmox UI settings now
+# Modify Cloud-Init login and set ipconfig IPv4 to DHCP from Proxmox UI settings now
 qm template 8001
 ```
 
@@ -252,7 +252,7 @@ qm set 8002 -ide2 vm:cloudinit
 qm set 8002 --boot c --bootdisk scsi0
 qm set 8002 --serial0 socket --vga serial0
 # Change SCSI Controller to "VirtIO SCSI"
-# Modify Cloud-Init login from Proxmox UI settings now
+# Modify Cloud-Init login and set ipconfig IPv4 to DHCP from Proxmox UI settings now
 qm template 8002
 ```
 
@@ -269,7 +269,9 @@ qm template 8002
 > Proxmox SSH Key ZFS Bug: When attempting to add a public key, I got the following error: _SSH public key validation error (500)_ . As it turns out, [this is a known bug](https://bugzilla.proxmox.com/show_bug.cgi?id=1188), but it does appear to be fixed. _Make sure to select_ Key > __SSH-2 RSA__ > RSA (radio button) when generating your SSH keys _or else it will not work._ Your public key should start with `ssh-rsa`. See example PuTTYGen screenshot below, and don't forget to password protect and save your private key.
 ![ssh_2_RSA](https://i.imgur.com/xbsItrt.png)
   - _IP Config: IPv4_ `DHCP` (radio selector). Note: The default IP value is nothing, so will not get any network access at all by default. Therefore, __you must set it to DHCP__ at or edit the values manually.
-![ip_dhcp](https://i.imgur.com/KJN61by.png)
+
+![ip_dhcp](https://i.imgur.com/lS3IC7d.png)
+
 - Change the SCSI Controller from the default setting to VirtIO SCSI from the Proxmox GUI.
 ![VirtIO_SCSI](https://i.imgur.com/Exs2OAE.png)
 > CAUTION: Do __not__ start the VM. If started, it will be boostrap the machine ID and UUID.
