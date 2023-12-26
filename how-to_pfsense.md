@@ -88,17 +88,17 @@ cp /etc/network/interfaces /etc/network/interfaces.bak
 
 ### Create open vSwtiches:
 
+> __Important__: Use a second physical NIC if available for your pfSense web UI/production network because on reboot, Proxmox hijacks the web IP of the pfSense and changes the Proxmox web UI URL access to the pfSense IP. Perhpas this is a bug, but physically attach a different, secondary ehternet cable to a secondary physical NIC on the Proxmox machine and create a third OVS Bridge and assign it to the secondary physical NIC to avoid this issue.
+
 - __Create > OVS Bridge > Bridge ports__: ```<your physical eth interface>```
 
 ![ovsbridge1](https://i.imgur.com/3hfa4to.png)
 
 - Fill in the fields as seen in the screenshot below and click __Create__.
 
-![ovsbridge2](https://i.imgur.com/2pmnSVI.png)
+![ovsbridge_vmbr2](https://i.imgur.com/wjrvMWY.png)
 
->  __Note__: Your physical interface will likely be different than mine. Therefore you MUST enter YOUR physical interface name instead. To get your interface name, open a shell to the Proxmox node and enter ```ip addr``` and it will list the interface(s).
-
-![interfacename](https://i.imgur.com/ZQWSHMQ.png)
+>  __Note__: Your physical interface will likely be different than mine. Therefore you MUST enter YOUR physical interface name instead. To get your interface name, open a shell to the Proxmox node and enter `ip addr` and it will list the interface(s). Again, it's important to __use a secondary physical NIC__ for the pfSense web UI __to avoid a Proxmox IP conflict__.
 
 ### Create the management interface for the Proxmox UI:
 
@@ -114,7 +114,9 @@ cp /etc/network/interfaces /etc/network/interfaces.bak
 
 ### Create a VLAN for publically accessible (internet-facing), _non-isloated_ and _unsecure_ VMs:
 
-- __Create > OVS IntPort__ > Name: "vmbr1_```<VLAN tag>```" > VLAN Tag: ```<number you choose>``` > Comment: ```<pfsense egress>```
+> The following VLANs are ideal for cybersecurity and malware analysis lab setups. If that's not your jam, then create VLANs to your desired outcome and skip all the SEC_EGRESS and SEC_ISOLATED firewall rules and simply create an RFC1918 alias for all the subnets (i.e. 10.0.0.0/24, 192.168.0.0/24, etc.) and add some basic firewall rules to VLAN'd networks instead. If you just want to set up simple firewall rules that prevent VLAN'd networks from communicating to each other, then see the end of this guide [here on basic pfSense firewall rules](#pfsense-firewall-rules).
+
+- __Create > OVS IntPort__ > Name: "vmbr1_```<VLAN tag>```" > VLAN Tag: ```<number you choose>``` > Comment: `<pfsense egress>`
 
 ![pfsense_egress](https://i.imgur.com/FOJ1qHq.png)
 
@@ -539,3 +541,24 @@ __Firewall > Rules > WAN > Add (down arrow)__
 > - [pfSense Firewall Rules That Make Sense](https://www.youtube.com/watch?v=3lJR67AMb9A)
 > - [RaidOwl's YouTube video about configuring various firewall rules](https://youtu.be/rHE6MCL4Gz8?si=GSpluLibUKUrewvL&t=545)
 > - [Speed Proxmox x pfSense VLAN Run Setup](https://www.youtube.com/watch?v=t7qt1wlS9uA)
+
+Example Firewall Configs:
+- The Basic VLAN
+> This setup prevent VLANs from reaching anything outside of the subnet (i.e. block 192.168.1.48 from reaching 10.0.4.158), but still allows internet access. In order for this config to work, you must have already assigned the aliases for `RFC1918`; see [how to create  `RFC1918` alias here](#create-a-alias-for-RFC1918)
+
+Fireway Rule Config Screenshots
+![thebasicVLAN](https://i.imgur.com/0Ql2gOa.png)
+![gamesinternetaccess](https://i.imgur.com/PECRy5O.png)
+![RFC1918blockrule](https://i.imgur.com/XpFKiiJ.png)
+
+- The WAN to VLAN
+> This is the same as above EXCEPT, an additiona rule has been added to allow traffic __from__ WAN net __to__ a VLAN, but prevent VLAN traffic from reaching the WAN net. 
+![thebasicVLAN](TBD)
+
+- Add the same rules as above.
+- Create from WAN to VLAN rule [WIP]
+  - All WAN net to VLAN rules fail
+  - VLAN to WAN net is sucessful, but it's not a two-way street (only the VLAN can ping the WAN net)
+  - Perhaps a jump machine from LAN net to VLAN net is required for this config?
+
+
