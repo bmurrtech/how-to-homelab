@@ -60,6 +60,43 @@ jupyter lab
 
 - End result: You should now see the "Git" tab and icon in your JupyterLab environment.
 
+### Create New Repository
+
+- Login to your GitHub account: https://github.com/login
+- Create a new Repository in your Github
+
+![](https://i.imgur.com/4N6xDhP.png)
+
+- Copy the URL of the Repository (i.e. https://github.com/bmurrtech/100-days-of-python)
+- Click the folder icon and navigate to the directory you wish to clone your repo to on your VM.
+- Click the GitHub icon (left) and choose "Clone Repository"
+
+![](https://i.imgur.com/UnEQ42g.png)
+
+### Push Changes to GitHub
+
+- Right-click the files you wish to push to the master: Right-click > "Track"
+
+![](https://i.imgur.com/AC12Coz.png)
+
+- Enter a comment of the changes made
+
+![](https://i.imgur.com/dugz6lL.png)
+
+- Enter your name as the contributure (email and name are optional, but hepful if working with team)
+- Once you have pushed the changes, you'll see a red notification buble on the GitHub upload cloud icon. Click it to push your changes to GitHub.
+
+![](https://i.imgur.com/LPGgKGL.png)
+
+- You will now be prompted to input your GitHub username and a password/access token. For the fun of it, I created a token specific for my new JupyterLab.
+
+### Create a GitHub Access token
+- Naviage to: GitHub > Settings (click on you profile icon) > Developer Settings (at the very bottom) > Personal Access Tokens > Fine-grained tokens (Beta) > Generate New Token (button)
+- Follow the GitHub guides on how to configure your tokens:
+    - [Creating a new token](https://docs.github.com/en/authentication/keeping-your-account-and-data-secure/managing-your-personal-access-tokens)
+    - Read up on [GitHub permissions](https://docs.github.com/rest/overview/permissions-required-for-fine-grained-personal-access-tokens) (if you care about that)
+- Copy the new token and paste it 
+
 ### Initialize a Repository to GitHub
 
 - Create a new folder at `/your/path/`
@@ -78,9 +115,3 @@ jupyter lab
 - Initialize this as a Repository: Git (tab) > Initialize a Repository
 
 ![](https://i.imgur.com/WrVYb5v.png)
-
-- When prompted, choose `Yes` to Initialize as a Repository.
-
-- Login to your GitHub account: https://github.com/login
-
-WIP
