@@ -17,7 +17,8 @@ This work is licensed under a
 - [How-to Pterodactyl Multi-game Server Manager](#pterodactyl)
 - [How-to Satisfactory Gamer Server](#satisfactory)
 - [How-to ARK Survival Evolved Game Server](#ark)
-- [How-to Modded Minecraft Game Server](#modded-minecraft)
+- [How-to Modded Minecraft Game Server](#ftb-minecraft-server)
+- [Useful Minecraft Server Commands](#useful-minecraft-server-commands)
 
 # Pterodactyl
 Pterodactly is a game server manager with a web UI for creating and managing mulitple game servers. If your server is dedicated for games, and you want the versatility of adding/removing/running different game servers on one dedicated VPS or VM, I reccommend installing it.
@@ -664,17 +665,157 @@ This tutorial assumes that you already have an Ubuntu server VM ready to go -- i
 ### FTB Server Install
 > FTB Server installs are simpler because they provide installers for your CPU and OS of choice. (i.e. `.exe` for Windows and/or `.deb` or `.rpm` file for Linux).
 
-![ftbserverinstallersbyos](https://i.imgur.com/LWuH0o5.png)
+- For ref. this guide follow the official FTB Server installer guide: https://feedthebeast.notion.site/Installing-a-Feed-the-Beast-Server-aeaea8a7220945d0ad0357c80c6c9d12
 
-- For ref. this guide follos the official FTB Server installer guide: https://feedthebeast.notion.site/Installing-a-Feed-the-Beast-Server-aeaea8a7220945d0ad0357c80c6c9d12
 - Since we are running a Linux Ubuntu OS, we will need to open a terminal to the VM and download (or transfer) the installer to the virtural machine.
 
+#### Create a User for Server Management
+
+- Switch to `root` user to create and give admin rights to the new user. Enter the following series of commands:
+
+```
+sudo su
+useradd -m -s /bin/bash ftbgenesis
+# Check folder path of new user at:
+cd /home/ftbgenesis
+# Create a password for the new user:
+passwd ftbgenesis
+# Type in your new password for this user twice
+# Add new user to admin group:
+usermod -aG sudo ftbgenesis
+# Switch to new user
+su - ftbgenesis
+```
+
+> You can name the user whatever you like. I chose `ftbgenesis` because it fits the modpack name.
+
+- Select one of the following options to get the modpack installer script (I think Option 1 is easiest, IMO):
+
 #### Option 1: Download Files Directly via `wget`
-- As pictured above, right click the server file download of choise (depends on your CPU and OS), and enter the following in the console/shell of your VM: `wget https://api.modpacks.ch/public/modpack/120/11425/server/linux` (this assumes you are downloading FTB Genesis for Linux, if you want a different modpack, you'll need to change the URL).
+- Get the URL to the installer script from the FTB website: Modpack > Versions > Server Files > Right-click appropriate OS (depends on your CPU and OS; i.e. 64-bit Linux) > Copy the URL
+
+![ftbserverinstallersbyos](https://i.imgur.com/LWuH0o5.png)
 
 #### Option 2: Transfer Files to VM via File Transfer Protocol
 - Please refer to my FileZilla guide on how to transfer to and from your Linxu VMs [here](https://github.com/bmurrtech/how-to-homelab/blob/main/how-to_ultimate_proxmox.md#filezilla).
-- Once you have set up FileZilla, proceed to run the installer from the console or `ssh` session.
+
+> Whatever option you choose proceed with the following once you have the installer:
+
+- Create a new directory in `ftbgenesis`:
+
+```
+cd /home/ftbgenesis
+mkdir server
+cd server
+
+# FTBGenesis Modpack URL for Linux x64
+wget https://api.modpacks.ch/public/modpack/120/11425/server/linux
+
+# This assumes you are downloading FTB Genesis for Linux, if you want a different modpack, you'll need to change the URL.
+
+# Check the directory with:
+ls
+```
+
+- You should now see `linux` (assuming you downloaded the linux version) in the newly created directory.
+
+![linuxinstallerindir](https://i.imgur.com/rmSzHEZ.png)
+
+- If you try to run the `linux` file as-is you will get a parse error; therefore, we must rename the file to whatever the file name of the FTB download is. To get the file name, you must:
+    - left-click the file name to download it,
+    - then copy the file name (exactly as it shows in the download)
+    - then change the name of `linux` to `<file-download-name-as-shown>`
+
+![filenameashown](https://i.imgur.com/e9sgeSV.png) 
+
+- In this case we will change the name to `serverinstall_120_11425`. To change the name in Linux:
+
+```
+# Action the following from the same directory as before "server"
+mv linux serverinstall_120_11425
+```
+
+- If you `ls` the directory, you should now see `serverinstall_120_11425` listed. Now, make this file executable so we can run the installer:
+
+```
+chmod +x serverinstall_120_11425
+```
+
+- Now, we can finally install the modpack server with:
+
+```
+./serverinstall_120_11425
+```
+
+- When prompted "Where would you like to install the server hit:
+
+```
+ENTER
+y
+y
+```
+
+![ftbserverinstallerprompts](https://i.imgur.com/qshcUjV.png)
+
+- Now, sit back and watch the matrix (all the downloads of mods and dependencies). Every new download supports a mod creator. According to the FTB guide, "Depending on your internet connection this can take a while. A full server installation is around a few hundreds megabytes in size." In the end you should see:
+
+![ftbgenesisinstallcompeted](https://i.imgur.com/W4jbnJA.png)
+
+- After the install has completed `ls` the directory and you should see a bunch of new files/folders:
+
+![newftbgenesisfiles](https://i.imgur.com/LLmO6dr.png)
+
+- First, let's `rm serverinstall_120_11425` to conserve a bit of space (we don't need the installer anyway).
+
+- Next, we need to make the starting `bash` script executable with `chmod +x start.sh`
+
+- Finally, we need to run it `./start.sh` and accept the EULA with `y`
+
+### Troubleshooting FTB Server
+
+#### Insufficient Memory error
+![Insufficientmemjava](https://i.imgur.com/VFTaYPi.png)
+- To fix, simply edit the Java parameters with: `nano user_jvm_args.txt` and change it to the specs you have availalbe or is reccomended by the modpack creator (see below):
+
+![recspecsforftbgenesis](https://i.imgur.com/n68Fn2Q.png)
+
+- In my case, I have RAM to spare, so I'm allocating more than necessary, but you can change the RAM to your liking by changing the `user_jvm_args.txt` as you see below:
+
+```
+# Xmx and Xms set the maximum and minimum RAM usage, respectively.
+# They can take any number, followed by an M or a G.
+# M means Megabyte, G means Gigabyte.
+# For example, to set the maximum to 3GB: -Xmx3G
+# To set the minimum to 2.5GB: -Xms2500M
+
+# A good default for a modded server is 4GB.
+# Uncomment the next line to set it.
+-Xmx16G - Xms4G
+```
+
+## Useful Minecraft Server Commands
+
+| Description | Example |
+| -------- | ---------- |
+| whitelist players | /whitelist add <username> |
+| ban player  | /ban <username> |
+| ban IP address | /ban-ip <public IP address> |
+| unban player | /pardon <username> |
+| view the ban list | /banlist |
+| give player admin | /op <username> | 
+| show all op players | /ops |
+| remove player admin | /deop <username> |
+| change gamerules | /gamerule <value> |
+| save a server backup | /save-all |
+| generate diag logs | /perf |
+| send PM to player | /msg <username> <message> |
+| give XP to player | /xp <username> |
+| teleport to player | /tp <username> |
+| clear weather | /weather clear |
+| list commands usage | /help <value> |
+| stop server | /stop |
+| reboot server | /restart |
+
 
 # Minecraft Forge Sever - Vanilla
 > The following guide is to set up a clean `Forge` server install without a server installer (as shown above with FTB).
