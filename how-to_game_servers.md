@@ -769,7 +769,94 @@ y
 
 - Next, we need to make the starting `bash` script executable with `chmod +x start.sh`
 
+### Create Minecraft Server Daemon
+> This process can be skipped if you don't mind starting the server manually, but this it's handy to implement an auto-start for server on boot especially if you have friends playing on the server.
+
+- Start by switching to the `root` user with `sudo su`
+- Next, navigate to: `cd /etc/systemd/system`
+- Now create a new `minecraft.service` file with `touch minecraft.service`
+- Let's edit this new file with `nano minecraft.service`
+- Paste the following inside the file:
+
+```
+[Unit]
+Description=Minecraft FTBGenesis Server
+Wants=network-online.target
+After=syslog.target network.target nss-lookup.target network-online.target
+
+[Service]
+Type=simple
+User=ftbgenesis
+Group=ftbgenesis
+StandardOutput=append:/var/log/minecraft.log
+StandardError=append:/var/log/minecraft.err
+Restart=on-failure
+ExecStart=/home/ftbgenesis/server/start.sh
+WorkingDirectory=/home/ftbgenesis/server/
+TimeoutSec=240
+
+[Install]
+WantedBy=multi-user.target
+```
+
+- To save the added text, press `CTRL + X` then `y` then `ENTER` to save the changes.
+- If you `cat minecraft.service` you should see the pasted text added.
+- Now, we need to make this file executable with `chmod +x /etc/systemd/system/minecraft.service`
+- If you `ls` the directory, you should see `minecraft.service` change colors indicating it is now executable.
+- With the newly added `minecraft.service` we need to reload the `systemd` with `systemctl daemon-reload`
+- Finally, let's enable the service with `systemctl enable minecraft.service`
+
+### Starting the FTB Server
+
+#### Non-auto-start Method (no minecraft.service file)
+
+- To start the server in a separate screen, run:
+
+```
+screen -S ftbserver
+cd ~/server
+./start.sh
+# This will start the game server with logs inside a screen.
+
+# On the Linux server screen, you can type CTRL + A, D to close out the screen
+
+# To see running screens/servers
+screen -ls
+
+# To bring the ftbserver screen back up
+screen -r <screen_name>
+
+# To kill the server
+CTRL + A,  K
+```
+
 - Finally, we need to run it `./start.sh` and accept the EULA with `y`
+
+#### Systemd Auto-start Method
+```
+screen -S ftbserver
+systemctl start minecraft.service
+# This will start the game server with logs inside a screen.
+# On the Linux server screen, you can type CTRL + A, D to close out the screen
+```
+
+- You will be prompted to authenticate as the `ftbgenesis` user with the password you set:
+
+![promptedforpasswordtolaunchsystemdmc](https://i.imgur.com/FJc1fMl.png)
+
+- Enter the password and then check on the service with: `systemctl status minecraft.service` and you should see:
+
+![statusofftbgenserverservice](https://i.imgur.com/sJ6Vgck.png)
+
+- If you want to view a log of the server's activity enter:
+
+```
+# monitor the log file
+tail -n3 -f /var/log/minecraft.log
+
+# monitor the log file
+tail -n3 -f /var/log/minecraft.err
+```
 
 ### Troubleshooting FTB Server
 
@@ -792,6 +879,8 @@ y
 # Uncomment the next line to set it.
 -Xmx16G - Xms4G
 ```
+
+- If that doesn't work, then `nano start.sh` and change the `-Xmx` and `-Xms` parameters there.
 
 ## Useful Minecraft Server Commands
 
