@@ -18,6 +18,7 @@ This work is licensed under a
 - [How-to Satisfactory Gamer Server](#satisfactory)
 - [How-to ARK Survival Evolved Game Server](#ark)
 - [How-to Modded Minecraft Game Server](#ftb-minecraft-server)
+- [Edit Minecraft Server Settings](#minecraft-server-settings)
 - [Useful Minecraft Server Commands](#useful-minecraft-server-commands)
 
 # Pterodactyl
@@ -881,6 +882,36 @@ tail -n3 -f /var/log/minecraft.err
 ```
 
 - If that doesn't work, then `nano start.sh` and change the `-Xmx` and `-Xms` parameters there.
+
+### Minecraft Server Settings
+> You must be in the server folder to access the following server files.
+
+- To enable whitelisting, `nano server.properties` and change `white-list: false` to `white-list: true` and save it.
+- To add players to the white list,  `nano whitelist.json` and edit the following sample whitelist below:
+```
+[
+  {
+    "uuid": "f430dbb6-5d9a-444e-b542-e47329b2c5a0",
+    "name": "username"
+  },
+  {
+    "uuid": "e5aa0f99-2727-4a11-981f-dded8b1cd032",
+    "name": "username"
+  }
+]
+```
+> Tip: To find the UUID of a player, use the [Minecraft UUID Converter](https://mcuuid.net/)
+
+- If you want to add yourself as operator in-game so you can add whitelists on the fly in-game, `nano ops.json` and paste the following:
+
+```
+{
+    "uuid": "389c92c7-eb5c-4a15-92b8-01a27348ac63",
+    "name": "hero887",
+    "level": 4,
+    "bypassesPlayerLimit": false
+  },
+```
 
 ## Useful Minecraft Server Commands
 
