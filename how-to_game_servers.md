@@ -17,7 +17,8 @@ This work is licensed under a
 - [How-to Pterodactyl Multi-game Server Manager](#pterodactyl)
 - [How-to Satisfactory Gamer Server](#satisfactory)
 - [How-to ARK Survival Evolved Game Server](#ark)
-- [How-to Modded Minecraft Game Server](#ftb-minecraft-server)
+- [How-to Modded Minecraft Server + Crafty Web Mangement UI](#modded-minecraft-with-crafty-web-ui)
+- [How-to FTB Server](#ftb-minecraft-server)
 - [Edit Minecraft Server Settings](#minecraft-server-settings)
 - [Useful Minecraft Server Commands](#useful-minecraft-server-commands)
 
