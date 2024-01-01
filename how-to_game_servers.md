@@ -883,6 +883,170 @@ tail -n3 -f /var/log/minecraft.err
 
 - If that doesn't work, then `nano start.sh` and change the `-Xmx` and `-Xms` parameters there.
 
+# Modded Minecraft with Crafty Web UI
+
+> Crafty is a totally free GUI for managing self-hosted Minecraft servers. It gives you professional control panel similar to what paid Minecraft hosting sites provide.
+
+Crafty Dashboard
+![](https://i.imgur.com/k6Oqvfe.png)
+
+Crafty Terminal (for Minecraft server commands)
+![](https://i.imgur.com/gtBrDi3.png)
+
+Crafty File Editor
+![](https://i.imgur.com/cetW09C.png)
+
+Crafty Server Metrics
+![](https://i.imgur.com/rdz55vv.png)
+
+In this guide, you will learn how to:
+- Create modded Minecraft servers
+- Manage your self-hosted Minecraft server remotely using the Crafty GUI throught a reverse proxy (i.e. enter www.yourdomain.com and oversee your server)
+
+There are several steps to accomplish our goal:
+1. Create a VM to host your Minecraft servers
+1. Install Crafty
+1. Import you modded Minecraft server into Crafty
+1. Create a reverse proxy to access Crafty GUI remotely and securely
+
+This guide assumes you already have a Linux VPS or VM to host your Minecraft server and we will jump right into installing Crafty to manage your Minecraft servers.
+
+### Install Crafty
+Ref. Crafty Linux Installer Guide: https://docs.craftycontrol.com/pages/getting-started/installation/linux/
+
+> Check Crafty documentaion to ensure that this guide matches recent changes to Crafty.
+
+#### My Installer Method
+> Running this method gives you control over the directory of the Crafty install which is vital to import modded server `.zip` files and other custom modded content from FTB for example. 
+
+- Install software dependencies:
+
+- Create a `crafty` user
+
+```
+sudo useradd crafty -s /bin/bash
+```
+
+- Create a place for your Crafty file contents:
+
+```
+sudo mkdir /home/crafty/server
+```
+
+- Make the directories owned by `crafty`:
+
+```
+sudo chown -R crafty:crafty /home/crafty
+```
+
+- `cd` to the new directory
+
+```
+cd /home/crafty
+```
+> Please be sure to be in `/home/crafty` folder before you run the auto installer. To check type `pwd` and make sure.
+
+-  Deploy the one-liner installer `cmdlet` provided by Crafty
+
+```
+git clone https://gitlab.com/crafty-controller/crafty-installer-4.0.git && \
+ cd crafty-installer-4.0 && \
+ sudo ./install_crafty.sh
+```
+
+- Done. Open a webrowser and enter `the-IPv4-address-of-your-server` and add the port `:8443` to access the Crafty web GUI. For example, if you are self-hosting, it will be IP assigned by your router such as: `192.168.1.57:8443`.
+
+> __Important Security Note:__ Due to recent cyberattacks targetting Crafty servers (read about it on Crafty's Discord), the default login credentials have been changed to a unique 64-character string for the login password is generated at new Crafty server creation. Therefore, you must `cat` the `app/config/default-creds.txt` which is found in the root folder path you installed Crafty (if you followed this guide, that will be `/home/crafty/crafty-4/app/config/default-creds.txt`. Copy the password and paste it into the web GUI to get access to your new Crafty dashboard, and DON'T FORGET TO CHANGE THE PASSWORD after you successfully login. Read [Crafty's post-install documentaion here](https://docs.craftycontrol.com/pages/getting-started/access/)
+
+### Importing a Custom Modded Server into Crafty
+- Create a new server (choose the __same__ versions as your choice modded server)
+
+![createcraftyserver](https://i.imgur.com/ALFTb2v.png)
+
+- Click on the newly created server to open the server details.
+
+![opennewlycreatedserver](https://i.imgur.com/r7mRrKT.png)
+
+- Open `Config` and take note of the folder path to your newly created server. You will need this to modify the folder contents insdie Linux VM/VPS hosting your server.
+
+![folderpathtoFTBGenesis](https://i.imgur.com/Gmr2980.png)
+
+- Back on your Linux machine, navigate to the folder path of the new Crafty server:
+
+```
+cd /home/crafty/crafty-4/servers/<nameoffoldercraftymade>
+```
+
+- Since we are importing our own custom modpack of choice, we do not need all the pre-built files, so we can remove them all with `rm -r *`
+
+- If you `ls` the folder (i.e. 
+`/home/crafty/crafty-4/servers/<nameoffoldercraftymade>`) it should display no contents now. This is what we want.
+
+- Now, we are clear to `wget` your modpack of choice. For this demonstration, we are going to `wget` the FTBGenesis server modpack. Refer to my [FTB server installer guide](#ftb-esrver-install) on how to get the clean link. From inside the `/home/crafty/crafty-4/servers/<nameoffoldercraftymade>` enter:
+
+```
+wget https://api.modpacks.ch/public/modpack/120/11425/server/linux
+```
+
+![wgetdemoshowlinux](https://camo.githubusercontent.com/c32ff251bc6b7932c7edb915616cc85ce6722a124902fd7e99aeef266295147a/68747470733a2f2f692e696d6775722e636f6d2f726d537a48455a2e706e67)
+> You should now see linux (assuming you downloaded the linux version) in the newly created directory, but if you try to run the `linux` file as-is you will get a parse error; therefore, we must rename the file to whatever the file name of the FTB download is.
+
+- Rename the `linux` file to `<name-of-FTB-download-modpack-ID>`, in the case of FTB Genesis, we simply take the URL `/120/11425` and change `linux` to `serverinstall_120_11425` (we are simply adding `serverinstall` and replacing the `\` with `_`). Make sense? In this case, the command would be:
+
+```
+mv linux serverinstall_120_11425
+```
+
+- Once the file has been renamed, we need to make that installer executable with:
+
+```
+chmod +x serverinstall_120_11425
+```
+
+- And now, we run it!
+
+```
+./serverinstall_120_11425
+```
+
+- When prompted _"Where would you like to install the server? [current directory]"_, hit `ENTER` and `y` to everything to install it to the Crafty directory we created prior. 
+
+> Depending on the server modpack size and your internet speed, this may take a few minutes. Download times vary. In the end you should see _"The server installed sucessfully"_.
+
+- In the end, `ls` the directory and you _should_ see all the modded server files and folders. If not, you may have accidentally installed the files somewhere else...
+
+### Crafty x Custom Modpack Settings
+> In order to make a custom modded Minecraft server work, you have to `cat` whatever the `run.sh` or `start.sh` generated by the modpack author (if there isn't one, you'll have to create one which is outside the scope of this tutorial, but basically, you need to create the custom server execution command required to run the server. Search "minecraft server execution scripts" to get an idea on how to make your own).
+
+- To get the custom server execution command for our example modded server for FTB Genesis, you need to run:
+
+```
+cat start.sh
+```
+
+- You'll need to copy the server exec snippet that looks like this:
+
+```
+"/usr/lib/jvm/java-17-openjdk-amd64/bin/java" -javaagent:log4jfix/Log4jPatcher-1.0.0.jar -XX:+UseG1GC -XX:+UnlockExperimentalVMOptions -Xmx6144M -Xms4096M @user_jvm_args.txt @libraries/net/minecraftforge/forge/1.19.2-43.3.5/unix_args.txt nogui
+```
+
+- Paste the string you copied from the `start.sh` into the `Server Execution Command` text box in Crafty.
+
+- Also, you'll need the change the `Server Executable` text box to whatever the `.jar` is in the modpack. In my case, it is `minecraft_server.1.19.2.jar`
+
+![FTBgencustomconfigcrafty](https://i.imgur.com/fVWRKl1.png)
+
+- Next, hit the `Update Executable` yellow button __FIRST__ and then the `Save` button after the server updates the executable settings (do not hit `Save` first because this bricked my Crafty UI for some reason.)
+
+- It's finally time to start the server, so navigate to the dashboard and hit the play button on the server.
+
+> If this is the first time you have to agree to the Minecraft EULA first then start the server again.
+
+- __Server fail to launch?__ If the server fails to start, check `Terminal` for errors and troubleshoot accordingly (in my case, I had a typo in my `Server Executable`).
+
+### Access Crafty Web UI Remotely
+If you want to manage your Minecraft servers remotely, you'll need a reverse proxy like NGNIX, but that requires Docker and other VMs. Not to mention, you'll be exposing your server to the outside world tempting hackers to crypto-jack or deploy ransomware on your server, so I prefer to use Cloudflare's free zero-trust tunnels. Learn how to [deploy Cloudflare reverse proxy here](https://github.com/bmurrtech/how-to-homelab/blob/main/how-to_ultimate_proxmox.md#remote-access), otherwise, you won't be able to access it outside your network. Alternatively, you could consider using TailScale which is another secure method of access.
+
 ### Minecraft Server Settings
 > You must be in the server folder to access the following server files.
 
@@ -935,7 +1099,6 @@ tail -n3 -f /var/log/minecraft.err
 | list commands usage | /help <value> |
 | stop server | /stop |
 | reboot server | /restart |
-
 
 # Minecraft Forge Sever - Vanilla
 > The following guide is to set up a clean `Forge` server install without a server installer (as shown above with FTB).
