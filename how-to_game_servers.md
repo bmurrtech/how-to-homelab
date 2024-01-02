@@ -1045,6 +1045,40 @@ cat start.sh
 
 - __Server fail to launch?__ If the server fails to start, check `Terminal` for errors and troubleshoot accordingly (in my case, I had a typo in my `Server Executable`).
 
+### Start Crafty and Server on Boot
+- In order to start the desried Minecraft server on boot, you need to A) create a new `.service` file and B) enable the service.
+- Let's start by enabling Crafty on boot with `systemctl enable crafty.service`
+- Next, `sudo su` to switch to the `root` user then `cd /` to go to the root directory and then `cd /etc/systemd/system` where we need to create a new `.service` file.
+- `pwd` to makes sure in the right folder, and then create a new service file with `touch <server_name>.service`. For example, `touch ftbskies.service`.
+- Next, edit the new file with `nano ftbskies.service` and paste the following:
+
+```
+[Unit]
+Description=Minecraft FTB Skies
+Wants=network-online.target
+After=syslog.target network.target nss-lookup.target network-online.target
+
+[Service]
+Type=simple
+User=crafty
+Group=crafty
+StandardOutput=append:/var/log/ftbskies.log
+StandardError=append:/var/log/ftbskies.err
+Restart=on-failure
+ExecStart=/home/crafty/crafty-4/servers/<folder-name-of-crafty-server>
+WorkingDirectory=/home/crafty/crafty-4/servers/<folder-name-of-crafty-server>
+TimeoutSec=240
+
+[Install]
+WantedBy=multi-user.target
+```
+
+> To get the exact folder name, you'll need to open a new screen with `screen -S crafty`, then `su - crafty`, then `cd ~/crafty/crafty-4/servers`, to find the right folder. If you `cd` to the folder and then `pwd` then you can copy the long folder name to then paste in the `.service` file.
+
+- After customizing the `.service` file to your specific server, save the file and then run `systemctl enable <server_name>.service` to launch the server at boot.
+
+> If you want to prevent the server from launching at boot simply run `systemctl disable server_name>.service`.
+
 ### Access Crafty Web UI Remotely
 If you want to manage your Minecraft servers remotely, you'll need a reverse proxy like NGNIX, but that requires Docker and other VMs. Not to mention, you'll be exposing your server to the outside world tempting hackers to crypto-jack or deploy ransomware on your server, so I prefer to use Cloudflare's free zero-trust tunnels. Learn how to [deploy Cloudflare reverse proxy here](https://github.com/bmurrtech/how-to-homelab/blob/main/how-to_ultimate_proxmox.md#remote-access), otherwise, you won't be able to access it outside your network. Alternatively, you could consider using TailScale which is another secure method of access.
 
