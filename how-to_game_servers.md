@@ -1046,9 +1046,18 @@ cat start.sh
 - __Server fail to launch?__ If the server fails to start, check `Terminal` for errors and troubleshoot accordingly (in my case, I had a typo in my `Server Executable`).
 
 ### Start Crafty and Server on Boot
-- In order to start the desried Minecraft server on boot, you need to A) create a new `.service` file and B) enable the service.
-- Let's start by enabling Crafty on boot with `systemctl enable crafty.service`
-- Next, `sudo su` to switch to the `root` user then `cd /` to go to the root directory and then `cd /etc/systemd/system` where we need to create a new `.service` file.
+- Let's start by enabling Crafty on boot with `systemctl enable crafty.service` this will ensure the Crafty UI is available at boot.
+- Next, navigate to Crafty Web UI > <Server Name> > Config > and toggle on "Server Auto Start" (scroll to bottom of config page).
+
+![autostartservercrafty](https://i.imgur.com/V6dqZAX.png)
+
+### If Crafty Failes to Auto Start Server
+
+- If Crafty's auto start ever fails you can always create bypass it with a service file.
+
+> Note: This method will also bypass Crafty and the server stats will not dispaly in the Crafty UI. So, only use this method if you want the convenience of uptime, but don't need the Crafty UI.
+
+- Start by entering `sudo su` to switch to the `root` user then `cd /` to go to the root directory and then `cd /etc/systemd/system` where we need to create a new `.service` file.
 - `pwd` to makes sure in the right folder, and then create a new service file with `touch <server_name>.service`. For example, `touch ftbskies.service`.
 - Next, edit the new file with `nano ftbskies.service` and paste the following:
 
@@ -1065,7 +1074,7 @@ Group=crafty
 StandardOutput=append:/var/log/ftbskies.log
 StandardError=append:/var/log/ftbskies.err
 Restart=on-failure
-ExecStart=/home/crafty/crafty-4/servers/<folder-name-of-crafty-server>
+ExecStart=/home/crafty/crafty-4/servers/<folder-name-of-crafty-server>/start.sh
 WorkingDirectory=/home/crafty/crafty-4/servers/<folder-name-of-crafty-server>
 TimeoutSec=240
 
