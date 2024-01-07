@@ -1124,7 +1124,7 @@ If you want to manage your Minecraft servers remotely, you'll need a reverse pro
 
 ### Run Simultaneous Minecraft Servers
 - Yes! It is possible to run more than one Minecraft server at the same time on different ports assuming your server specs (CPU + RAM) can support it (provision accordingly). 
-![proofofmultimcservers](https://i.imgur.com/WdOdvtO.png)
+![proofofmultimcservers](https://i.imgur.com/HsIAjkD.png)
 
 - Running more than one server at a time is even easier thanks to Crafty. Simply edit a few properties and you are good to go! In this case we need to change the server port in the Crafty UI > <Minecraft Server Name> > Config > Server Port (set as something other than the default 25565, in my case I went with 25566).
 ![multimc1](https://i.imgur.com/qh7vmdZ.png)
