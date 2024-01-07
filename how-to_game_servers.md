@@ -18,6 +18,7 @@ This work is licensed under a
 - [How-to Satisfactory Gamer Server](#satisfactory)
 - [How-to ARK Survival Evolved Game Server](#ark)
 - [How-to Modded Minecraft Server + Crafty Web Mangement UI](#modded-minecraft-with-crafty-web-ui)
+- [How-to Run Multiple Minecraft Servers on Same Machine](#run-simultaneous-minecraft-servers)
 - [How-to FTB Server](#ftb-minecraft-server)
 - [Edit Minecraft Server Settings](#minecraft-server-settings)
 - [Useful Minecraft Server Commands](#useful-minecraft-server-commands)
@@ -1120,6 +1121,18 @@ If you want to manage your Minecraft servers remotely, you'll need a reverse pro
     "bypassesPlayerLimit": false
   },
 ```
+
+### Run Simultaneous Minecraft Servers
+- Yes! It is possible to run more than one Minecraft server at the same time on different ports assuming your server specs (CPU + RAM) can support it (provision accordingly). 
+![proofofmultimcservers](https://i.imgur.com/WdOdvtO.png)
+
+- Running more than one server at a time is even easier thanks to Crafty. Simply edit a few properties and you are good to go! In this case we need to change the server port in the Crafty UI > <Minecraft Server Name> > Config > Server Port (set as something other than the default 25565, in my case I went with 25566).
+![multimc1](https://i.imgur.com/qh7vmdZ.png)
+- And don't forget to change the port defaults in the actual `server.properties` settings, see below:
+![mulitmc2](https://i.imgur.com/YxH0A9o.png)
+- As a last and final step, you must open whatever port you assigned in your router firewall port forwarding rules.
+
+> Note: When trying to join your server in-game, you must use the IP:<unique_port_you_made>. So, in my case it would be: <my_public_IP_address:25565>. You must also map your DNS A records to the unique `25566` port you made 
 
 ## Useful Minecraft Server Commands
 
