@@ -82,6 +82,8 @@ version: '3.8'
 services:
   focalboard:
     image: mattermost/focalboard
+    ports:
+      - "8001:8000"
     volumes:
       - focalboard-data:/data
     environment:
@@ -108,11 +110,12 @@ services:
   nginx:
     image: nginx:latest
     ports:
-      - "80:80"
-      - "443:443"
+      - "4080:80"
+      - "4443:443"
+      - "4081:81"
     volumes:
       - ./nginx/sites-enabled:/etc/nginx/sites-enabled
-      - ./nginx/certbot-conf:/etc/letsencrypt
+      - certbot-data:/etc/letsencrypt
       - ./nginx/certbot-www:/var/www/certbot
     depends_on:
       - focalboard
@@ -121,14 +124,16 @@ services:
   certbot:
     image: certbot/certbot
     volumes:
-      - ./nginx/certbot-conf:/etc/letsencrypt
+      - certbot-data:/etc/letsencrypt
       - ./nginx/certbot-www:/var/www/certbot
-    entrypoint: certbot renew --webroot --webroot-path=/var/www/certbot
+    entrypoint: >
+     /bin/sh -c 'trap exit TERM; while :; do certbot renew; sleep 12h & wait $${!}; done;'
     depends_on:
       - nginx
     restart: unless-stopped
 
 volumes:
+  certbot-data:
   focalboard-data:
   postgres-data:
 ```
@@ -136,8 +141,14 @@ volumes:
 
 ![4_new_focalboard](https://i.imgur.com/LpYRHQ3.png)
 
+- Now, try accessing Focalboard directly via `http://your_server_ip:8001`
+
+![no_SSL_focalboard_proof](https://i.imgur.com/ef8p7uH.png)
+
 ## 4. Configure Ngnix Reverse Proxy
-- To access config files of containers, you have to use a special docker command via SSH such as:
+If you want to remove the dreaded "Not Secure" from the URL bar, you'll need a reverse proxy and Let's Encrypt SSL certificate. Here's how:
+
+- Create a `focalboard` config file in `/etc/nginx/sites-enabled`. To access config files of containers, you have to use a special docker command via SSH such as:
 
 ```
 docker exec -it <nginx_container_name> bash
@@ -155,57 +166,88 @@ touch focalboard && nano focalboard
 
 ```
 upstream focalboard {
-   server localhost:5432;
-   keepalive 32;
+    server localhost:8001; # Ensure this matches the Focalboard container's internal port
+    keepalive 32;
 }
 
 server {
-   listen 80 default_server;
+    listen 80 default_server;
+    server_name focalboard.example.com; # Replace with your domain
 
-   server_name focalboard.example.com;
+    location /.well-known/acme-challenge/ {
+        root /var/www/certbot;
+    }
 
-   location ~ /ws/* {
-       proxy_set_header Upgrade $http_upgrade;
-       proxy_set_header Connection "upgrade";
-       client_max_body_size 50M;
-       proxy_set_header Host $http_host;
-       proxy_set_header X-Real-IP $remote_addr;
-       proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
-       proxy_set_header X-Forwarded-Proto $scheme;
-       proxy_set_header X-Frame-Options SAMEORIGIN;
-       proxy_buffers 256 16k;
-       proxy_buffer_size 16k;
-       client_body_timeout 60;
-       send_timeout 300;
-       lingering_timeout 5;
-       proxy_connect_timeout 1d;
-       proxy_send_timeout 1d;
-       proxy_read_timeout 1d;
-       proxy_pass http://focalboard;
-   }
+    location / {
+        return 301 https://$host$request_uri;
+    }
+}
 
-   location / {
-       client_max_body_size 50M;
-       proxy_set_header Connection "";
-       proxy_set_header Host $http_host;
-       proxy_set_header X-Real-IP $remote_addr;
-       proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
-       proxy_set_header X-Forwarded-Proto $scheme;
-       proxy_set_header X-Frame-Options SAMEORIGIN;
-       proxy_buffers 256 16k;
-       proxy_buffer_size 16k;
-       proxy_read_timeout 600s;
-       proxy_cache_revalidate on;
-       proxy_cache_min_uses 2;
-       proxy_cache_use_stale timeout;
-       proxy_cache_lock on;
-       proxy_http_version 1.1;
-       proxy_pass http://focalboard;
-   }
+server {
+    listen 443 ssl;
+    server_name focalboard.example.com; # Replace with your domain
+
+    ssl_certificate /etc/letsencrypt/live/focalboard.example.com/fullchain.pem;
+    ssl_certificate_key /etc/letsencrypt/live/focalboard.example.com/privkey.pem;
+
+    location ~ /ws/* {
+        proxy_set_header Upgrade $http_upgrade;
+        proxy_set_header Connection "upgrade";
+        client_max_body_size 50M;
+        proxy_set_header Host $http_host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $scheme;
+        proxy_set_header X-Frame-Options SAMEORIGIN;
+        proxy_buffers 256 16k;
+        proxy_buffer_size 16k;
+        client_body_timeout 60;
+        send_timeout 300;
+        lingering_timeout 5;
+        proxy_connect_timeout 1d;
+        proxy_send_timeout 1d;
+        proxy_read_timeout 1d;
+        proxy_pass http://focalboard;
+    }
+
+    location / {
+        client_max_body_size 50M;
+        proxy_set_header Connection "";
+        proxy_set_header Host $http_host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $scheme;
+        proxy_set_header X-Frame-Options SAMEORIGIN;
+        proxy_buffers 256 16k;
+        proxy_buffer_size 16k;
+        proxy_read_timeout 600s;
+        proxy_cache_revalidate on;
+        proxy_cache_min_uses 2;
+        proxy_cache_use_stale timeout;
+        proxy_cache_lock on;
+        proxy_http_version 1.1;
+        proxy_pass http://focalboard;
+    }
 }
 ```
-- Don't forget to modify the `server_name focalboard.example.com;` with your own domain name.
-- After adding the necessary custom config, type `exit` and then restart the `nginx` container with: `docker restart <container_name_of_nginx>` to apply the config settings.
+- After making these changes, make sure to test the configuration with `nginx -t` and then reload NGINX to apply them with `nginx -s reload`
+- In this configuration:
+
+  - The first `server` block listens on port 80 (HTTP) and includes a location directive to serve the Let's Encrypt challenge files from `/var/www/certbot`. It also redirects all HTTP traffic to HTTPS.
+
+  - The second `server` block listens on port 443 (HTTPS) and includes the SSL certificate configurations for `focalboard.example.com`. It serves both the WebSocket endpoints (/ws/*) and regular HTTP traffic, proxying requests to the Focalboard application.
+
+  - Replace `focalboard.example.com` with your actual domain and ensure the paths to the SSL certificates match where Let's Encrypt places them on your server.
+
+  - Make sure the `upstream focalboard` section is correctly pointing to your Focalboard server's address and port. The example uses `localhost:8000`, but this should match your actual Focalboard setup.
+
+  - This combined configuration should handle SSL termination with Let's Encrypt certificates and proxy requests to Focalboard while ensuring secure WebSocket connections.
+
+- Remember to reload or restart NGINX after making these changes for them to take effect. After adding the necessary custom config, type `exit` and then restart the `nginx` container with: `docker restart <container_name_of_nginx>` to apply the config settings.
+
+- Now, try accessing NGINX directly via `http://your_server_ip:4081`
+
+![nginx_splashscreen](https://i.imgur.com/LdwB72A.png)
 
 ## 5. Configure Your DNS Settings
 
@@ -270,9 +312,52 @@ Additional Notes
 _Replace `yourdomain.com` with your actual domain name and adjust the VM details as needed._
 export this as markdown .md text into a text file
 
-## 6. Create a Cron Job to Auto-renew SSL Cert
+## 6. (Optional) Auto-renew SSL Cert
+Since the following snippet was already included in the `docker-compose.yaml` above, a cron job to renew SSL is not necessary. However, if you are following the official Focalboard guide and didn't use Docker to create your Focalboard, then this cron job step is important.
 
-To create a cron job that updates the SSL certificate using Certbot every 30 days, you will need to edit the crontab file on your server where Docker and Certbot are running. Here's how you can do it:
+```yaml
+entrypoint: >
+  /bin/sh -c 'trap exit TERM; while :; do certbot renew; sleep 12h & wait $${!}; done;'
+```
+
+Before dicussing the cron job, allow me to explain the logic and comparision of SSL certificat renewal methods in Docker.
+
+Comparing SSL Certificate Renewal Methods in Docker
+---------------------------------------------------
+
+Both methods are designed to renew SSL certificates managed by Certbot, but they have different approaches and execution timings.
+
+### Method 1: Continuous Loop with `sleep` in Entrypoint
+
+`entrypoint: >   /bin/sh -c 'trap exit TERM; while :; do certbot renew; sleep 12h & wait $${!}; done;'`
+
+*   **Continuous Loop**: This approach runs an infinite loop within the container.
+*   **Renewal Frequency**: Executes `certbot renew` every 12 hours.
+*   **Signal Responsiveness**: Uses `trap exit TERM` to respond correctly to shutdown signals.
+*   **Pros**:
+    *   Self-contained renewal mechanism.
+    *   The container continuously checks for certificate renewal.
+*   **Cons**:
+    *   The container remains running, which might be slightly more resource-intensive.
+
+### Method 2: Direct Renew Command in Entrypoint
+
+`entrypoint: certbot renew --webroot --webroot-path=/var/www/certbot`
+
+*   **Single Execution**: Runs the `certbot renew` command once upon container startup.
+*   **No Looping**: Lacks an internal looping or scheduling mechanism.
+*   **Webroot Plugin**: Specifies the `--webroot` plugin for serving challenge files.
+*   **Pros**:
+    *   Simple and straightforward.
+    *   Executes renewal as a one-time action per container startup.
+*   **Cons**:
+    *   Requires container restart or external scheduling for periodic renewal checks.
+
+### Summary
+
+The first method offers a self-sufficient, continuously running solution ideal for Docker environments. The second method is simpler but requires external mechanisms to ensure frequent enough execution for timely certificate renewals. To create a cron job that updates the SSL certificate using Certbot every 30 days, you will need to edit the crontab file on your server where Docker and Certbot are running. Here's how you can do it:
+
+### Create a Cron Job (non-Docker Method)
 
 1.  **Open the Crontab Configuration**:
     
