@@ -123,6 +123,9 @@ services:
 
   certbot:
     image: certbot/certbot
+    environment:
+      - CERTBOT_EMAIL=your-email@example.com # Replace with your email address
+    command: certonly --webroot --webroot-path=/var/www/certbot --agree-tos --no-eff-email -d yourdomain.com # Replace with your domain
     volumes:
       - certbot-data:/etc/letsencrypt
       - ./nginx/certbot-www:/var/www/certbot
@@ -145,8 +148,16 @@ volumes:
 
 ![no_SSL_focalboard_proof](https://i.imgur.com/ef8p7uH.png)
 
+> If you are using a `standalone` or different DNS plugin than `webroot`, you may consider modifying the `yaml` file to account for this divergence. The specific configuration will vary depending on the plugin and your particular requirements. Make sure to refer to the documentation for your chosen method for any additional requirements or steps. If you are NOT using a web server (i.e. no NGINX reverse proxy), then refer to my [Certbot guide](https://github.com/bmurrtech/how-to-homelab/blob/main/how-to_certbot.md) for reference.
+
 ## 4. Configure Ngnix Reverse Proxy
 If you want to remove the dreaded "Not Secure" from the URL bar, you'll need a reverse proxy and Let's Encrypt SSL certificate. Here's how:
+
+- Test that you NGINX directly via `http://your_server_ip:4081`
+
+![nginx_splashscreen](https://i.imgur.com/LdwB72A.png)
+
+> If you cannot reach it, check you firewall settings and open the `4081` port to access it.
 
 - Create a `focalboard` config file in `/etc/nginx/sites-enabled`. To access config files of containers, you have to use a special docker command via SSH such as:
 
@@ -160,7 +171,8 @@ cd /etc/nginx/sites-enabled
 ```
 touch focalboard && nano focalboard
 ```
-> If you get the error: `bash: nano: command not found` then you must intall `nano` first with `apt-get update && apt-get install nano`
+> If you get the error: `bash: nano: command not found` then you must intall `nano` first with `apt-get update && apt-get install nano -y`
+> Note: You will have to perform this _everytime_ you use `docker exec`.
 
 - Copy and paste the following configurations into `focalboard`:
 
@@ -187,8 +199,8 @@ server {
     listen 443 ssl;
     server_name focalboard.example.com; # Replace with your domain
 
-    ssl_certificate /etc/letsencrypt/live/focalboard.example.com/fullchain.pem;
-    ssl_certificate_key /etc/letsencrypt/live/focalboard.example.com/privkey.pem;
+    ssl_certificate /etc/letsencrypt/live/focalboard.example.com/fullchain.pem; # Replace with your domain
+    ssl_certificate_key /etc/letsencrypt/live/focalboard.example.com/privkey.pem; # Replace with your domain
 
     location ~ /ws/* {
         proxy_set_header Upgrade $http_upgrade;
@@ -244,10 +256,6 @@ server {
   - This combined configuration should handle SSL termination with Let's Encrypt certificates and proxy requests to Focalboard while ensuring secure WebSocket connections.
 
 - Remember to reload or restart NGINX after making these changes for them to take effect. After adding the necessary custom config, type `exit` and then restart the `nginx` container with: `docker restart <container_name_of_nginx>` to apply the config settings.
-
-- Now, try accessing NGINX directly via `http://your_server_ip:4081`
-
-![nginx_splashscreen](https://i.imgur.com/LdwB72A.png)
 
 ## 5. Configure Your DNS Settings
 
