@@ -32,7 +32,7 @@ docker network create focalboard_network
 ### Focalboard App Stack
 - Click `stack` and use the `Web Editor` to copy and paste the following `docker compose yaml` contents:
 
-- ```yaml
+```yaml
 version: '3.8'
 
 services:
@@ -119,6 +119,8 @@ If you want to remove the dreaded "Not Secure" from the URL bar for your Focalbo
 > Troubleshooting Note: You may encounter a NGINX broken screen that looks like this:
 > ![incorrect_nginx_screen](https://i.imgur.com/LdwB72A.png)
 > If you cannot reach the _correct_ login page for NGINX with the username and password fields (as pictured above), check your firewall settings and make sure to open _all three_ ports: `4443`, `4080`, and `4081` port to access it. It will NOT work unless you open up all three ports.
+
+The following guide assumes: __A)__ You have already own an active domai and __B)__ you use Cloudflare to manage your DNS. To configure NGINX reverse proxy to manage SSL certificates for HTTPS connections, see [RaidOwl's Cloudflare x NGINX tutorial](https://youtu.be/GarMdDTAZJo?feature=shared&t=463). Simply modify the NGINX web UI settings specifically for Focalboard (which is __http__ and set the port as `8001` if you used my `yaml` configuration).
 ______________________________________________________________
 
 WIP
