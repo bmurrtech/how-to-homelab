@@ -21,6 +21,13 @@
 ### Selecting Machine Type and Region
 - Under **Machine type**, select "e2-micro" (2 vCPUs, 1 GB memory), which is eligible for the free tier.
 - Choose a **Region** and **Zone** that are part of the free tier. Refer to the [Free Tier Requirements](https://cloud.google.com/free/docs/free-cloud-features) for available options.
+- Set the Book disk size to 30GB
+- Change the book disk to the following settings (standard persistent disk is the free tier):
+
+![boot_disk](https://i.imgur.com/2oAFsoE.png)
+
+### Free Tier Specs:
+![freetier](https://i.imgur.com/zDzU8E9.png)
 
 ### Network and Egress Settings
 - Under **Networking**, select "standard" for **Network Service Tier**.
