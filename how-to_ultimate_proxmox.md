@@ -614,11 +614,18 @@ args: -cpu 'host,+kvm_pv_unhalt,+kvm_pv_eoi,hv_vendor_id=NV43FIX,kvm=off'
 > ![nvidia_linux_driver](https://i.imgur.com/DVtGyeT.png)
 > On your Linux VM with the GPU passthrough, test the NVIDIA driver using `nvidia-smi`. If you get an "Unknown Error" then you must edit the `/etc/pve/qemu-server/<vmid>.conf` and ensure that that the following is reflected `cpu: host,hidden=1,flags=+pcid`. This will ensure that the host machine cannot detect that it is a virtual machine, thus permitting the NVIDIA driver to run.
 
+### Troubleshooting "TASK ERROR: start failed: QEMU exited with code 1"
+When trying to add the PCI device and booting for the first time, you may incentor this task error and the VM will not start. If this is the case, ensure you do NOT check "Primar GPU" as this will break the VM as pictured below:
+![no_all_func](https://i.imgur.com/xlllnp9.png)
+
 ### NVIDIA Drivers VM Check
 - __SSH to your VM__ and __run the following command to check__ if the GPU / PCI is listed:
 
 ```
 lspci | grep -i nvidia
+
+# get GPU status
+nvidia-smi
 ```
 - If the drivers are loaded, `lsmod` will list them and you can proceed to add the PCI VGA device to the target VM. If not, you'll need to download the NVIDIA drivers to the target VM. See below.
 
