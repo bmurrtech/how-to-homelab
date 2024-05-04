@@ -508,7 +508,7 @@ echo "blacklist nvidiafb" >> /etc/modprobe.d/blacklist.conf
 - Now, let's add the PCIE cards we want the VFIO to passthrough to the VMs:
 
 ```
-lspci -nn
+lspci -nn | grep NVIDIA
 ```
 
 > Note: The shell will output a jargon of text. Look for specific lines that list the card you want to add to the VFIO. See screenshot for example:
@@ -573,7 +573,7 @@ update-initramfs -u -k all
 lspci -nnk
 ```
 
-- If the line __reads, `Kernel driver in use: vfio-pci`__ _or_ the __`in use` line is missing entirely__, __then the device is ready__ to be used for passthrough.
+- If the line __reads, `Kernel driver in use: vfio-pci`__ __then the device is ready__ to be used for passthrough. Note: if you add more GPUs to the hypervisor, you must repeat this process for EACH GPU by adding the unique vendor ID codes to the `/etc/modprobe.d/vfio.conf` file as comma separated values.
 
 - Now, on the VM side and settings, we want to __enable OMVF (UEFI)__. See screenshot below:
 
