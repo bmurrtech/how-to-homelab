@@ -600,16 +600,10 @@ args: -cpu 'host,+kvm_pv_unhalt,+kvm_pv_eoi,hv_vendor_id=NV43FIX,kvm=off'
 ![enable__bios_IMMOU](https://i.imgur.com/D9Jp4Xj.png)
 
 > __No IMMOU Error__: You may get the following error if your CPU does not support IMMOU / Passthrough: _"TASK ERROR: cannot prepare PCI pass-through, IOMMU not present."_ If you get this error message, you need to __1) ensure that your CPU supports IOMMU (I/O Memory Management Unit)/Intel Virtualization Technology for Directed I/O (VT-d)__ and __2) that you [enable IOMMU in your BIOS](https://us.informatiweb.net/tutorials/it/bios/enable-iommu-or-vt-d-in-your-bios.html#msi-bios-american-megatrends).__ Navigate through each BIOS screen using the “arrow” keys and find the “IOMMU,” “I/O Memory Management Unit,” or “Intel ® VT-d”setting (usually located under the “Advanced” or “Chipset/Northbridge/Tylersburg IOH/Intel VT for Directed I/O Configuration”settings menu).`VT-d`, `ACS`, `ARI`, `virtualization` on your mother board `BIOS`. __Look under UEFI__ settings and __enable UEFI__ wherever available.  If you try to start the VM and IMMOU is not supported or configured/enabled at the BIOS level, you will also get an error.
+>
+> > Note to __NVIDIA Users__: If you're still experiencing issues, or the ROM file is causing issues on its own, you might need to patch the ROM file (particularly for NVIDIA cards). There's a great tool for patching GTX 10XX series cards here: https://github.com/sk1080/nvidia-kvm-patcher and here https://github.com/Matoking/NVIDIA-vBIOS-VFIO-Patcher. It only works for 10XX series though. If you have something older, you'll have to patch the ROM file manually using a hex editor, which is beyond the scope of this tutorial guide.
 
-- __SSH to your VM__ and __run the following command to check__ if the GPU / PCI is listed:
-
-```
-lspci
-```
-
-> Note to __NVIDIA Users__: If you're still experiencing issues, or the ROM file is causing issues on its own, you might need to patch the ROM file (particularly for NVIDIA cards). There's a great tool for patching GTX 10XX series cards here: https://github.com/sk1080/nvidia-kvm-patcher and here https://github.com/Matoking/NVIDIA-vBIOS-VFIO-Patcher. It only works for 10XX series though. If you have something older, you'll have to patch the ROM file manually using a hex editor, which is beyond the scope of this tutorial guide.
-
-- If you are passing a GPU or any othe PCI that needs drivers, __download the necessary drivers directly to the VM__.
+- If you are passing a GPU or any othe PCI that needs drivers, __download the necessary drivers directly__.
 
 > Important for __Linux Users__: You can run a `wget` followed by the official driver download link via terminal.
 > Example: `wget https://international.download.nvidia.com/long-name-driver-number-specific-to-your-card.run`
@@ -619,6 +613,80 @@ lspci
 > 
 > ![nvidia_linux_driver](https://i.imgur.com/DVtGyeT.png)
 > On your Linux VM with the GPU passthrough, test the NVIDIA driver using `nvidia-smi`. If you get an "Unknown Error" then you must edit the `/etc/pve/qemu-server/<vmid>.conf` and ensure that that the following is reflected `cpu: host,hidden=1,flags=+pcid`. This will ensure that the host machine cannot detect that it is a virtual machine, thus permitting the NVIDIA driver to run.
+
+### NVIDIA Drivers VM Check
+- __SSH to your VM__ and __run the following command to check__ if the GPU / PCI is listed:
+
+```
+lspci | grep -i nvidia
+```
+- If the drivers are loaded, `lsmod` will list them and you can proceed to add the PCI VGA device to the target VM. If not, you'll need to download the NVIDIA drivers to the target VM. See below.
+
+### Download NVIDIA Drivers to Host
+- You have a few options for installing NVIDIA drivers:
+  - From NVIDIA's Website: Go to the NVIDIA Driver Downloads page to select your GPU model and Linux version to download the correct driver. This method requires switching to a text terminal and stopping the graphical interface to install the driver.
+  - Using a Package Manager (Recommended for Proxmox and Debian-based systems): Install the drivers using APT. This method is easier and handles dependencies automatically:
+```
+apt update
+apt install nvidia-driver
+```
+
+#### Add Non-Free Repositories:
+The NVIDIA drivers might be located in the non-free repositories, which are not enabled by default on Debian-based systems. You can add these by modifying your /etc/apt/sources.list:
+- Open the sources file:
+```bash
+sudo nano /etc/apt/sources.list
+```
+- Add non-free to your Debian repository lines. For example:
+```arduino
+deb http://deb.debian.org/debian/ buster main contrib non-free
+deb-src http://deb.debian.org/debian/ buster main contrib non-free
+```
+> Replace buster with your actual Debian version (e.g., bullseye, stretch).
+
+- Save, exit the edior, then run:
+```
+apt update
+```
+- Install the Kernel Headers and Build Tools:
+   - Sometimes, the NVIDIA drivers require kernel headers and build tools to compile modules:
+```
+apt install linux-headers-$(uname -r) build-essential
+```
+- Try Installing the NVIDIA Driver Again. After ensuring that the non-free repository is enabled and your system is updated:
+```
+apt install nvidia-driver
+```
+- If the drviers installed, reboot the machine:
+
+```
+reboot
+```
+
+### Direct NVIDIA Website Install Method
+#### Use the NVIDIA Official Installer:
+- If the package manager still doesn't work, you can download the official NVIDIA driver from the NVIDIA website:
+  - Visit the NVIDIA Driver Downloads page.
+  - Select your GPU model and Linux distribution.
+  - Download the runfile (*.run).
+
+> Before running the installer, you might need to stop your display manager: `sudo systemctl stop [display-manager].service  # e.g., gdm3, lightdm, sddm`
+
+- Make the downloaded script executable and run it:
+```bash
+chmod +x NVIDIA-Linux-x86_64-xxx.xx.run
+sudo ./NVIDIA-Linux-x86_64-xxx.xx.run
+```
+Follow the on-screen instructions to install the driver.
+- Reboot and Verify:
+  - Reboot your system:
+```
+sudo reboot
+```
+- After rebooting, check that the NVIDIA driver is correctly installed:
+```
+nvidia-smi
+```
 
 # Windows Proxmox Install
 
