@@ -1,8 +1,7 @@
-# Prereqs
-- NVIDIA CUDA Drivers
-- NVIDIA CUDA Toolkit
-- PyTorch
-- Tensorflow
+# Contents
+- [Install Ollama](install-ollama)
+- [Llama3 Hardware Utilization](#llama3-hardware-utilization)
+- [AI/ML Dev Tools](#ai-and-ml-dev-tools)
 
 # NVIDIA CUDA Drivers
 You can choose to download the drivers driectly or install an Ubuntu PopOS with the drivers preloaded.
@@ -37,6 +36,52 @@ sudo reboot
 ```
 nvidia-smi
 ```
+
+# Install Ollama
+See [Ollama Github](https://github.com/ollama/ollama) for instructions.
+
+## Quickstart Install (Linux)
+For Linux: use the curl command to install:
+
+```
+curl -fsSL https://ollama.com/install.sh | sh
+```
+
+## Install LLM
+Find your LLM of choice from the [Ollama library](https://ollama.com/library) and download it via Termail with:
+
+```
+ollama pull <LLM>
+
+# E.g. ollama pull llama3
+```
+
+## Llama3 Hardware Utilization
+> Test was run using `ollama run llama3` not the 70B model.
+> Note: When attempting to run the Llama3 70B model with the same specs below, it was at a crawl -- practically unsuable.
+![local_llm_specs](https://i.imgur.com/rkeBg62.png)
+- For Windows Subsystem Linux:
+  - 15GB RAM
+  - 32GB RAM (recc'd)
+- CPU
+  - 6 cores (min)
+  - 8 cores(recc'd)
+- GPU
+![gpu_in_use](https://i.imgur.com/fgHBkot.png)
+  - 8GB VRAM GDDR6
+  - Tensor Cores: 2880
+  - CUDA Cores: 6144
+  - Clock Speed: 1.55GHz
+  - Memorary Bandwidth: 448GB/s
+  - Memory Interface: 256-bit
+  - Memory Bus Width: 128-bit
+  - Power Consumption (in-use): 40-60W
+  - Power Consumption (idle): 12W
+
+# AI and ML Dev Tools
+- NVIDIA CUDA Toolkit: NVIDIA's GPU-accelerated deep learning framework.
+- PyTorch: Open-source ML library for dynamic computation graph, automatic differentiation, and hardware acceleration for GPUs and TPUs.
+- TensorFlow: Open-source ML library for building deep learning networks and training machine learning models.
 
 ## NVIDIA CUDA Toolkit
 - Check if installed by running:
@@ -182,23 +227,4 @@ With the new CUDA version installed, it's often necessary to reinstall your deep
 ```
 pip uninstall tensorflow  # or pytorch
 pip install tensorflow-gpu  # or the appropriate pytorch version
-```
-
-# Install Ollama
-See [Ollama Github](https://github.com/ollama/ollama) for instructions.
-
-## Quickstart Install (Linux)
-For Linux: use the curl command to install:
-
-```
-curl -fsSL https://ollama.com/install.sh | sh
-```
-
-## Install LLM
-Find your LLM of choice from the [Ollama library](https://ollama.com/library) and download it via Termail with:
-
-```
-ollama pull <LLM>
-
-# E.g. ollama pull llama3
 ```
