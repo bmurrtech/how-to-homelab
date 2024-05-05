@@ -4,6 +4,12 @@
 - PyTorch
 - Tensorflow
 
+# NVIDIA CUDA Drivers
+You can choose to download the drivers driectly or install an Ubuntu PopOS with the drivers preloaded.
+
+## PopOS - Ubuntu with NVIDA Drivers
+- To save the hassle of a direct NVIDA driver download, you can installe PopOS with NVIDIA drvers baked-in. Go to [System76's website](https://pop.system76.com/), and from the downloads options, select the ISO with NVIDIA.
+
 ## Direct NVIDIA Website Install Method
 
 Use the NVIDIA Official Installer:
@@ -38,10 +44,58 @@ nvidia-smi
 nvcc --version
 ```
 - If the command is not recognized, you must intall the `nvidia-cuda-toolkit`
+- To ensure the right version of the CUDA toolkit is installed, it's best to download it directly from [NVIDIA's dev repo](https://developer.nvidia.com/cuda-downloads). In my case, I'll install the 12.4 version:
 ```
-sudo apt install nvidia-cuda-toolkit
+# Add the NVIDIA package repositories
+wget https://developer.download.nvidia.com/compute/cuda/repos/ubuntu2004/x86_64/cuda-ubuntu2004.pin
+sudo mv cuda-ubuntu2004.pin /etc/apt/preferences.d/cuda-repository-pin-600
+sudo apt-key adv --fetch-keys https://developer.download.nvidia.com/compute/cuda/repos/ubuntu2004/x86_64/3bf863cc.pub
+sudo add-apt-repository "deb https://developer.download.nvidia.com/compute/cuda/repos/ubuntu2004/x86_64/ /"
+sudo apt-get update
+
+# Install CUDA
+sudo apt-get -y install cuda-toolkit-12-4
 ```
-- After installing `nvcc --version` will display an output (e.g. `Build cuda_11.5.r11.5`).
+
+```
+sudo apt-get update       # Fetches the list of available updates
+sudo apt-get upgrade      # Installs some updates; might hold back some packages
+sudo apt-get dist-upgrade # Handles changing dependencies with new versions of packages
+```
+
+- Add the following at the end of your `~/.bashrc` or equivalent:
+
+```
+nano ~/.bashrc
+
+# add these lines to the end of the file
+export PATH=/usr/local/cuda/bin:$PATH
+export PATH=/usr/local/cuda/12.4/bin:$PATH
+export LD_LIBRARY_PATH=/usr/local/cuda/lib64:$LD_LIBRARY_PATH
+```
+- Reload your profile:
+```
+source ~/.bashrc
+```
+
+- Reboot the machine:
+```
+reboot
+```
+
+- After adding the lines and installing, run `nvcc --version` and it should display an output (e.g. `Build cuda_12.4`).
+
+> WIP - Disregard
+> ```
+> wget https://developer.download.nvidia.com/compute/cuda/12.4.1/local_installers/cuda_12.4.1_550.54.15_linux.run
+> ```
+> - After downloading the runfile, make it executable and run it to install the NVIDIA toolkit:
+> - ```
+>   # make the runfile executable
+>   sudo chmod +x cuda_<version>_linux.run
+>   # run the runfile
+>   sudo ./cuda_<version>_linux.run
+>   ```
 
 ## Install Pytorch
 - Install `pip`
@@ -57,13 +111,13 @@ pip install torch torchvision torchaudio
 ```
 
 #### For CUDA Version:
-Replace cuXXX with your CUDA version, e.g., cu113 for CUDA 11.3, and run:
+Replace cuXXX with your CUDA version, e.g., cu124 for CUDA 12.4, and run:
 
-```arduino
-pip install torch torchvision torchaudio -f https://download.pytorch.org/whl/torch_stable.html
+```
+pip install torch==x.x.x+cu124 torchvision==x.x.x+cu124 torchaudio==x.x.x+cu124 -f https://download.pytorch.org/whl/torch_stable.html
 ```
 
-> You don't need to change the `torch_stable.html` URL to select a different CUDA version for PyTorch. The CUDA version is implicitly selected by choosing the correct wheel file that matches your CUDA environment, which pip handles automatically when you specify the -f flag with the URL.
+> You don't need to change the `torch_stable.html` URL to select a different CUDA version for PyTorch. The CUDA version is implicitly selected by choosing the correct wheel file that matches your CUDA environment, which pip handles automatically when you specify the `-f`ls flag with the URL.
 
 ## Install TensorFlow
 TensorFlow offers separate packages for CPU-only and GPU-enabled installations. Make sure to install the version that matches your system's capabilities. For the GPU version, ensure you have the necessary NVIDIA software installed (CUDA and cuDNN).
