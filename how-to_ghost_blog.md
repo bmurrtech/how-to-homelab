@@ -21,6 +21,7 @@ _______________________
 TRAEFIK-DOCKER-COMPOSE:
 _______________________
 
+```yaml
 version: '3.7'
 
 services:
@@ -47,7 +48,7 @@ services:
 networks:
   frontend:
     external: true
-
+```
 ___________________
 
 TRAEFIK-CONFIG-YAML
