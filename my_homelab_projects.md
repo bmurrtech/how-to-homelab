@@ -14,19 +14,19 @@ See MikeRoyal's [Master HomeLab Guide](https://github.com/mikeroyal/Self-Hosting
 - [x] Create HA Kubernetes cluster via Ansible playbook; [see Techno Tim's doc](https://docs.technotim.live/posts/k3s-etcd-ansible/)
 - [ ] [Install Rancher on top of Kubernetes cluster](https://ranchermanager.docs.rancher.com/v2.5/pages-for-subheaders/install-upgrade-on-a-kubernetes-cluster)
 - [ ] Build Docker containers via Rancher w/K3S to run all the following web apps:
-  - [ ] Secure network access via [TailScale](https://tailscale.com/kb/1039/install-ubuntu-2004/)
-  - [ ] Reverse Proxy via:
-    - [ ] [Traefik](https://perfectmediaserver.com/remote-access/traefik101/)
+  - [x] Secure network access via [TailScale](https://tailscale.com/kb/1039/install-ubuntu-2004/)
+  - [x] Reverse Proxy via:
+    - [x] [Traefik](https://perfectmediaserver.com/remote-access/traefik101/)
     - [ ] [VPNs](https://perfectmediaserver.com/remote-access/vpns/)
     - [ ] [Kemp Loadmaster](https://github.com/bmurrtech/my-road-to-tech-job-in-22-days#kemp-loadmaster)
-  - [ ] VNC Remote Access to Homelab apps via [Guacamole}(https://www.youtube.com/watch?v=gsvS2M5knOw)
+  - [x] VNC Remote Access to Homelab apps via [Guacamole}(https://www.youtube.com/watch?v=gsvS2M5knOw)
   - [x] Create a validating, recursive, caching DNS resolver fpr home network
     - [x] Create [Unbound DNS Server](https://unbound.docs.nlnetlabs.nl/en/latest/use-cases/home-resolver.html)
     - [x] [Configure clients](https://stevessmarthomeguide.com/home-network-dns-dnsmasq/) to local Unbound DNS
-  - [ ] Setup [Cloudron](https://www.cloudron.io/store/index.html) free account
+  - [x] Setup [Cloudron](https://www.cloudron.io/store/index.html) free account
     - [ ] See [a list of Remote Access methods](https://github.com/mikeroyal/Self-Hosting-Guide#Remote-Access)
   - [x] [Cybersecurity](https://github.com/bmurrtech/0-100-days-cloud-engineer/blob/main/home_network_cybersecurity.md) steps to secure homelab.
-    - [ ] SSO Authelia Setup
+    - [x] SSO Authelia Setup
   - [x] Pterodactyl + Docker [game server](https://docs.technotim.live/posts/pterodactyl-game-server/)
   - [ ] Homer (interface for NAS)
   - [ ] [ownCloud](https://owncloud.com/pricing/) - self-hosted cloud with mobile apps; [see support docs](https://owncloud.com/docs-guides/)
@@ -34,9 +34,9 @@ See MikeRoyal's [Master HomeLab Guide](https://github.com/mikeroyal/Self-Hosting
   - [ ] [PhotoSync for iOS](https://www.photosync-app.com/home.html)
   - [ ] Build HTML Website using [Hugo](https://gohugo.io/getting-started/quick-start/) or [Kopage](https://www.kopage.com/tour)
     - [ ] View Hugo [themes](https://themes.gohugo.io/)
-  - [ ] Self-host website; see [self-hosted web server options](https://github.com/awesome-foss/awesome-sysadmin#web)
-  - [ ] [MongoDB Database](https://www.mongodb.com/pricing) 512MB "Shared" free version - for building user database (i.e. Ant Media Server, Wordpress users, etc.)
-    - [ ] Read about MongoDB basics in [this book](https://github.com/miollek/Free-Database-Books/blob/master/book/MongoDB%20Basics.pdf)
+  - [x] Self-host website; see [self-hosted web server options](https://github.com/awesome-foss/awesome-sysadmin#web)
+  - [x] [MongoDB Database](https://www.mongodb.com/pricing) 512MB "Shared" free version - for building user database (i.e. Ant Media Server, Wordpress users, etc.)
+    - [x] Read about MongoDB basics in [this book](https://github.com/miollek/Free-Database-Books/blob/master/book/MongoDB%20Basics.pdf)
   - [ ] Jellyfin media server (install on Synology NAS)
   - [ ] Openbooks (ebooks media server)
   - [ ] Deluge (BitTorrent client written in Python)
@@ -53,4 +53,3 @@ See MikeRoyal's [Master HomeLab Guide](https://github.com/mikeroyal/Self-Hosting
 - [ ] [Deploy WordPress website in AWS](https://www.aosnote.com/offers/xFzqby9z/checkout) (use `TECHWITHLUCY` promo code at check out for 20% off)
   - [ ] Add "AWS Project. Deployed and hosted a highly-available WordPress app using EC2, RDS, Route 53, ASG, and VPC." to resume
 - [ ] [Serverless Web Application on AWS](https://aws.amazon.com/getting-started/hands-on/build-serverless-web-app-lambda-apigateway-s3-dynamodb-cognito/)
-- [ ] [Chat Bot Amazon Connect Call Center on AWS](https://github.com/aws-samples/amazon-lex-connect-workshop)
