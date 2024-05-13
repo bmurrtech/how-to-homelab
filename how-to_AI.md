@@ -1,9 +1,76 @@
 # Contents
-- [Install Ollama](install-ollama)
+- [AI Dev Environment](#ai-development-envitonment-setup)
+- [Install Ollama](#install-ollama)
 - [Llama3 Hardware Utilization](#llama3-hardware-utilization)
 - [AI/ML Dev Tools](#ai-and-ml-dev-tools)
 
-# NVIDIA CUDA Drivers
+# AI Development Envitonment Setup
+Setting up an AI development environment using Conda, CUDA Toolkit, PyTorch, Python, and NVIDIA CUDA drivers on Windows involves several strategic steps to ensure seamless integration and optimal performance. Begin by installing the NVIDIA CUDA drivers compatible with your GPU from the NVIDIA website, ensuring that your system meets the hardware requirements for CUDA. Next, install Anaconda, which simplifies managing Python versions and libraries. Create a new Conda environment and install specific Python versions. Use Conda to install PyTorch with CUDA support, ensuring that the PyTorch version matches the CUDA Toolkit version. This setup allows developers to leverage GPU acceleration for AI and machine learning projects, maximizing computational efficiency.
+
+### Steps:
+- Install NVIDIA CUDA Drivers: Download and install from NVIDIA's official site.
+- Install Anaconda: Download from the Anaconda website and install.
+- Create Conda Environment: `conda create -n aienv python=3.10`
+- Activate Environment: `conda activate aienv`
+- Install PyTorch with CUDA: `conda install pytorch torchvision torchaudio cudatoolkit=12.1 -c pytorch # (adjust cudatoolkit version as necessary).`
+- Verify PyTorch recognizes CUDA:
+
+```python
+python
+import torch
+print(torch.cuda.is_available())  # This should return True
+print(torch.__version__) # this should return torch <ver> cuda<ver>, if not, see the troubleshooting steps below
+```
+
+### Set Windows System Variables
+This process ensures Miniconda3 and its tools are accessible from any command line session, streamlining Python script execution and package management. To set system variables on Windows, particularly for incorporating Miniconda3 into the system PATH, follow these steps:
+
+- Open System Properties:
+  - Right-click on the Start button.
+  - Click on "System," then "Advanced system settings," and then "Environment Variables."
+- Modify the PATH Variable:
+  - In the "System Variables" section, scroll to find the "Path" variable.
+  - Select it and click "Edit."
+- Add Miniconda3 to the PATH:
+  - Click "New" and add the Miniconda3 directory path, which is likely C:\ProgramData\miniconda based on your installation.
+  - Add the Scripts directory as well: C:\ProgramData\miniconda\Scripts.
+- Save and Apply Changes:
+  - Click "OK" to close the Edit Environment Variable window, then "OK" again to close the Environment Variables window, and finally "OK" to close the System Properties window.
+- Verify Changes:
+  - Open a new Command Prompt and type `conda --version` to ensure it's recognized, indicating successful addition to the PATH.
+
+### Troubleshooting Missing CUDA
+If the output indicates that your PyTorch installation is the CPU version (e.g. `2.3.0+cpu`), you need to install the CUDA-enabled version of PyTorch to utilize GPU capabilities. Here's how you can fix this:
+
+#### Uninstall the Current PyTorch Version:
+Open your terminal or command prompt and run:
+
+```bash
+pip uninstall torch torchvision torchaudio
+```
+
+#### Install PyTorch with CUDA Support:
+Visit the PyTorch Get Started Page to generate the correct install command for your system with CUDA support. Make sure to select the CUDA version compatible with your GPU and system.
+
+For example, if your system supports CUDA 11.3, the command might look like this:
+
+```bash
+pip install torch torchvision torchaudio --extra-index-url https://download.pytorch.org/whl/cu113
+```
+
+#### Verify CUDA Installation:
+After installation, verify that PyTorch recognizes CUDA:
+
+```python
+python
+import torch
+print(torch.cuda.is_available())  # This should return True
+print(torch.__version__) # this should return torch <ver> cuda<ver>, if not, see the steps below
+```
+
+This approach ensures that you install the correct version of PyTorch that includes GPU support via CUDA.
+
+# Linux NVIDIA CUDA Drivers
 You can choose to download the drivers driectly or install an Ubuntu PopOS with the drivers preloaded.
 
 ## PopOS - Ubuntu with NVIDA Drivers
@@ -55,6 +122,82 @@ ollama pull <LLM>
 
 # E.g. ollama pull llama3
 ```
+
+Ollama supports a list of models available on [ollama.com/library](https://ollama.com/library 'ollama model library')
+
+Here are some example models that can be downloaded:
+
+| Model              | Parameters | Size  | Download                       |
+| ------------------ | ---------- | ----- | ------------------------------ |
+| Llama 3            | 8B         | 4.7GB | `ollama run llama3`            |
+| Llama 3            | 70B        | 40GB  | `ollama run llama3:70b`        |
+| Phi-3              | 3.8B       | 2.3GB | `ollama run phi3`              |
+| Mistral            | 7B         | 4.1GB | `ollama run mistral`           |
+| Neural Chat        | 7B         | 4.1GB | `ollama run neural-chat`       |
+| Starling           | 7B         | 4.1GB | `ollama run starling-lm`       |
+| Code Llama         | 7B         | 3.8GB | `ollama run codellama`         |
+| Llama 2 Uncensored | 7B         | 3.8GB | `ollama run llama2-uncensored` |
+| LLaVA              | 7B         | 4.5GB | `ollama run llava`             |
+| Gemma              | 2B         | 1.4GB | `ollama run gemma:2b`          |
+| Gemma              | 7B         | 4.8GB | `ollama run gemma:7b`          |
+| Solar              | 10.7B      | 6.1GB | `ollama run solar`             |
+
+## Customize a Models
+
+### Import from GGUF
+
+Ollama supports importing GGUF models in the Modelfile:
+
+1. Create a file named `Modelfile`, with a `FROM` instruction with the local filepath to the model you want to import.
+
+   ```
+   FROM ./vicuna-33b.Q4_0.gguf
+   ```
+
+2. Create the model in Ollama
+
+   ```
+   ollama create example -f Modelfile
+   ```
+
+3. Run the model
+
+   ```
+   ollama run example
+
+### Customize a prompt
+
+Models from the Ollama library can be customized with a prompt. For example, to customize the `llama3` model:
+
+```
+ollama pull llama3
+```
+
+Create a `Modelfile`:
+
+```
+FROM llama3
+
+# set the temperature to 1 [higher is more creative, lower is more coherent]
+PARAMETER temperature 1
+
+# set the system message
+SYSTEM """
+You are Mario from Super Mario Bros. Answer as Mario, the assistant, only.
+"""
+```
+
+Next, create and run the model:
+
+```
+ollama create mario -f ./Modelfile
+ollama run mario
+>>> hi
+Hello! It's your friend Mario.
+```
+   
+## Install Huggingface Open-source Community LLMs
+To tap into HuggingFacecommunity-created, custom fine-tuned LLM models not supported by Ollama, research AI web GUIs that support such models such as [Oobabooga's TextGen WebUI](https://github.com/oobabooga/text-generation-webui)
 
 ## Llama3 Hardware Utilization
 > Test was run using `ollama run llama3` not the 70B model.
