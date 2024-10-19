@@ -33,7 +33,7 @@ This guide will walk you through the steps to set up a new Neoxa mining VM, from
   - This confirms that the NEOX test amount was sent correctly.
 - After confirming the test funds were correctly sent, **proceed with sending the full 1,000,000 amount** by repeating the prior step but inputting `1,000,000` instead.
 
-## Step 5: Obtain Your Transaction ID
+## Step 5: Obtain Your Unique Parameters for Smartnode Creation
 - **Find your unique Transaction ID** from the GUI by following these steps:
   - Navigate to **"Transactions"** in the Neoxa Core Wallet.
   - **Double-click the most recent transaction** to open its details.
@@ -46,6 +46,11 @@ This guide will walk you through the steps to set up a new Neoxa mining VM, from
   - This command will display the output index for the transaction you made earlier. It will be either `0` or `1`.
   - **Adjust the example command accordingly** in the next step based on your unique output index.
 
+- **Select an Address for Fees**: You will also need to select an address that contains enough NEOX to cover transaction fees. Follow these steps:
+  - In the Debug console, use **`listaddressbalances`** to display all addresses with a balance.
+  - Choose an address with a sufficient balance for transaction fees (note that an average transaction fee is `0.005` NEOX).
+  - If you do not have an address with sufficient balance, **create a new address** labeled **"fees"** and fund it with enough NEOX to cover all your mining fees for a year or more. For instance, funding it with around `1 NEOX` would cover many transactions.
+
 ## Step 6: Run ProTx Quick Setup Command
 - **Navigate to UI > Tools > Debug console** in the Neoxa Core Wallet to open the console.
 - **Enter the modified command** that you customized from the previous steps to generate the necessary `.conf` file for the VM that will serve as the miner node.
@@ -53,11 +58,12 @@ This guide will walk you through the steps to set up a new Neoxa mining VM, from
     ```
     protx quick_setup "cfc14de1e1cbe2bf619a6d152a0ade2e4841b6df8817327bbdf8f69e868a553c" "0" "192.168.10.1:8788" "GJ4XMMYGem8AV36yyojdiMfVAp9kEueTmq"
     ```
-  - Replace `<transaction_id>`, `<output_index>`, `<ip_address>:<port>`, and `<owner_address>` with your customized values.
+  - Replace `<transaction_id>`, `<output_index>`, `<public_ip_address>:<port>`, and `<deposit_fee_address>` with your customized values.
 
 - **Collateral index**: This should match the output index (`0` or `1`) determined in the earlier step.
+- **Public IP Address Requirement**: The <ip_address> must be a public IP address. If using a VPS, check with your VPS host for the "public IP" and use that. If self-hosting, Google "What's My IP" to find your own public IP. Note: For security reasons, it's best to never share your public IP address with anyone.
 - **Fee Address**: This should be any address in your wallet that contains enough Neox to pay the fee (cannot be the address to which you sent the 1 million Neox). When you enter the "protx quick_setup" command, it is considered a transaction and requires a small fee. `0.005` Neox is enough.
-  - In the Debug console, use **`listaddressbalances`** to display all addresses with a balance, choose one, and replace the address in the example command.
+  - In the Debug console, use **`listaddressbalances`** to display all addresses with a balance, choose one, and replace the address in the example command that has a sufficient balance.
 - **Execute the Command**: Run the **`protx quick_setup`** command within the Debug console. This action will generate a `.conf` file for that specific node in the directory where the wallet is currently located. Open the file and copy its contents for further use.
 
 ## Step 7: Spinning Up Your Neoxa Miner VM
