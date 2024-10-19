@@ -82,6 +82,10 @@ If my guide helped you, consider sending me whatever NEOX you can spare as thank
 
 ![NEOX_gratuity](https://i.imgur.com/V9mLtsF.png)
 
+```
+Gbv3TnMQoFp1sf7Bfay4r9uQewDVJ5jAQX
+```
+
 ## Important Note on Running Multiple SELF-HOSTED Nodes
 - **Running Multiple Self-Hosted Nodes Behind the Same Public IP**: This generaly (almost exclusively) only applies to self-hosted nodes, but if you are planning to run more than one node behind the same public IP address (especially if you are self-hosting), you will encounter an error when running the ProTx command, stating **"bad-protx-dup-addr (code 18)"**. This error prevents you from creating a second mining node behind the same IP.
   - **Network Provisions**: To avoid this issue, special network provisions must be made, or you must host your second node using a VPS service that provides a different public IP address. While using a VPS is the easiest solution, it may not be the most cost-effective, as hosting costs can exceed the mining profits of the node (e.g., a VPS with 2 cores and 4GB of RAM per month might cost more than the profits of mined NEOX).
