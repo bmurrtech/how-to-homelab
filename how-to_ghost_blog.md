@@ -8,200 +8,75 @@ ref. 3: non-docker install: https://www.youtube.com/watch?v=99FzAidIHXs&t=78s
 ref. 4: ghost-cli: https://ghost.org/docs/ghost-cli/
 
 # Contents
+
 - Docker Compose `yaml` Files
+- [Deployment Overview](#deployment-overview)
 - [Setting Up DNS Records in Cloudflare for a Blog Subdomain](#setting-up-dns-records-in-cloudflare-for-a-blog-subdomain)
 - [Configure Cloud Firewall for Cloud Self-hosting](#configuring-a-firewall-on-a-digital-ocean-droplet)
 
-IMPORTANT: You MUST make the ${GHOST_DB_NAME} and ${MYSQL_DATABASE} DIFFERENT than "mysql" (i.e. "ghostdb") or else you'll get errors such as "CREATE DATABASE mysql CHARACTER SET utf8mb4; - Access to system schema 'mysql' is rejected."
+## Deployment Overview
 
-IF getting continual database errors after making changes to the docker compose, simply delete the stack and delete the associated volumes from Portainer, and redeploy the same stack with the changes you want.
+You can approach the deployment in a couple of ways:
 
-_______________________
+### A) Using an Orchestration Tool like Portainer (Preferred)
+This method is recommended for editing `.env` variables easily and managing stacks visually. 
 
-TRAEFIK-DOCKER-COMPOSE:
-_______________________
+### B) CLI Deployment
+This method will not be covered in this guide, but you can access the `docker-compose.yml` files at `/docker_projects/` of this repository.
 
-```yaml
-version: '3.7'
+### Overview
 
-services:
-  traefik:
-    image: traefik:latest
-    container_name: traefik
-    ports:
-      - "80:80"
-      - "443:443"
-      # -- (Optional) Enable Dashboard, don't do in production
-      # - "8081:<your_port>"
-    volumes:
-      - "/var/run/docker.sock:/var/run/docker.sock:ro"
-      - "/home/btm/traefik/config/traefik.yaml:/etc/traefik/traefik.yaml:ro"
-      - "/home/btm/traefik/config/conf/:/etc/traefik/conf/"
-      - "/home/btm/traefik/config/certs/:/etc/traefik/certs/"
-    # -- (Optional) When using Cloudflare as Cert Resolver
-    # environment:
-    #   - CF_DNS_API_TOKEN=your-cloudflare-api-token
-    networks:
-      - frontend
-    restart: unless-stopped
+1. **Cost Savings**: Most importantly, this method saves you $31/month (see [Ghost Pricing](https://ghost.org/pricing/)), as it is an open-source blog platform and enables 1000+ integrations that are not available in the cheaper starter plan.
+2. **Firewall Configuration Assumptions**: This guide assumes you have properly configured your firewall to permit ports 80 and 443. For self-hosting, I suggest using ProxMox as your hypervisor, pfSense as your virtual firewall, and port forwarding those ports to the static IP address of the pfSense VM.
+3. **VM Specifications**: To host your own Ghost blog securely, you'll need a VM with minimum specifications as follows:
+   - **CPU**: 1 vCPU
+   - **RAM**: 2 GB
+   - **Storage**: 10 GB SSD (minimum)
+   - **Network**: Static IP address
+   I suggest self-hosting, as you can convert an old laptop into a webserver Ghost blog, but you can also use a VPS hosting provider like Digital Ocean (just avoid ARM CPU architecture, as I encountered compatibility issues here).
+4. **Ghost-Stack and Reverse Proxy**: You will need to use my Ghost-Stack (which includes a MySQL database) and a separate reverse proxy container build using Traefik. A link to the `docker-compose.yml` files for each, including a `traefik.yml` template to get you started, may be found at `/docker_projects/`.
 
-networks:
-  frontend:
-    external: true
-```
-___________________
+## Step 1: Deploy Traefik
+See `/docker_projects/traefik` for details, but essentially you must:
 
-TRAEFIK-CONFIG-YAML
-___________________
-Trafik is necessary if you want to configure a self-signed certificate (SSL) for your Ghost blog website.
+1. **Create a Folder for Traefik Config File**: Navigate to your folder path where you want the Traefik compose file, then create a `config` folder inside it.
+2. **Download Traefik Config File**: Use the following `wget` command to download the configuration file:
+   ```bash
+   wget <placeholder URL for traefik.yaml>
+   ```
+3. **Configure Traefik**: Edit the config file using your favorite text editor and change the email address to your email.
+
+Take special note that if you want to enable the Traefik Web UI/dashboard (which is not recommended for production), you'll need to uncomment the following lines:
 
 ```yaml
-global:
-  checkNewVersion: false
-  sendAnonymousUsage: false
-
-# -- (Optional) Change Log Level and Format here...
-#     - loglevels [DEBUG, INFO, WARNING, ERROR, CRITICAL]
-#     - format [common, json, logfmt]
-# log:
-#  level: ERROR
-#  format: common
-#  filePath: /var/log/traefik/traefik.log
-
-# -- (Optional) Enable Accesslog and change Format here...
-#     - format [common, json, logfmt]
-# accesslog:
-#   format: common
-#   filePath: /var/log/traefik/access.log
-
-# -- (Optional) Enable API and Dashboard here, don't do in production
-# api:
-#   dashboard: true
-#   insecure: true
-
-# -- Change EntryPoints here...
-entryPoints:
-  web:
-    address: :80
-    # -- (Optional) Redirect all HTTP to HTTPS
-    # http:
-    #   redirections:
-    #     entryPoint:
-    #       to: websecure
-    #       scheme: https
-  websecure:
-    address: :443
-  # -- (Optional) Add custom Entrypoint
-  # custom:
-  #   address: :8080
-
-# -- Configure your CertificateResolver here...
-# certificatesResolvers:
-#   staging:
-#     acme:
-#       email: your-email@example.com
-#       storage: /etc/traefik/certs/acme.json
-#       caServer: "https://acme-staging-v02.api.letsencrypt.org/directory"
-#       -- (Optional) Remove this section, when using DNS Challenge
-#       httpChallenge:
-#         entryPoint: web
-#       -- (Optional) Configure DNS Challenge
-#       dnsChallenge:
-#         provider: your-resolver (e.g. cloudflare)
-#         resolvers:
-#           - "1.1.1.1:53"
-#           - "8.8.8.8:53"
-  production:
-    acme:
-      email: your-email@example.com
-      storage: /etc/traefik/certs/acme.json
-      caServer: "https://acme-v02.api.letsencrypt.org/directory"
-#       -- (Optional) Remove this section, when using DNS Challenge
-#       httpChallenge:
-#         entryPoint: web
-#       -- (Optional) Configure DNS Challenge
-      dnsChallenge:
-        provider: cloudflare
-        resolvers:
-          - "1.1.1.1:53"
-          - "8.8.8.8:53"
-
-# -- (Optional) Disable TLS Cert verification check
-# serversTransport:
-#   insecureSkipVerify: true
-
-# -- (Optional) Overwrite Default Certificates
-# tls:
-#   stores:
-#     default:
-#       defaultCertificate:
-#         certFile: /etc/traefik/certs/cert.pem
-#         keyFile: /etc/traefik/certs/cert-key.pem
-# -- (Optional) Disable TLS version 1.0 and 1.1
-#   options:
-#     default:
-#       minVersion: VersionTLS12
-
-providers:
-  docker:
-    # -- (Optional) Enable this, if you want to expose all containers automatically
-    exposedByDefault: false
-  file:
-    directory: /etc/traefik/conf
-    watch: true
+api:
+  dashboard: true
+  insecure: true
 ```
-__________________________
 
-GHOST-STACK-DOCKER-COMPOSE
-___________________________
+Since this guide assumes you have already pre-configured Cloudflare and have an API token for the `dnsChallenge`, we will leave the `httpChallenge` commented out (change this if your situation is different along with the provider you are using).
 
-```yaml
-version: "3.8"
+Lastly, the "staging" section for certificate resolution is for testing purposes to avoid getting rate-limited by Let's Encrypt (5 certs per hour is the limit). If you are not worried about this, comment out the staging section and uncomment the "production" section instead. For more details on this process, watch Christian Lempa's video [here](https://www.youtube.com/watch?v=wLrmmh1eI94). Note that we are using variables slightly differently in this guide.
 
-services:
-  ghost:
-    image: ghost:latest
-    restart: always
-    environment:
-      - database__client=mysql
-      - database__connection__host=db
-      - database__connection__user=ghost # Ensure this matches MYSQL_USER below
-      - database__connection__password=<yourPW> # Ensure this matches MYSQL_PASSWORD below
-      - database__connection__database=ghostdb
-      - url=http://<YOUR_IP>:2368
-    volumes:
-      - ghost-content:/var/lib/ghost/content
-    ports:
-      - "2368:2368"
-    depends_on:
-      db
-        condition: service_healthy
+After configuring Traefik, use the `Stacks > Repository` feature in Portainer to pull the `docker-compose.yml`:
 
-  db:
-    image: mysql:8.0
-    restart: always
-    volumes:
-      - mysql-data:/var/lib/mysql
-    environment:
-      - MYSQL_USER=ghost # This creates a user named 'ghost'
-      - MYSQL_DATABASE=ghostdb # This creates a database named 'ghostdb'
-      - MYSQL_PASSWORD=<yourPW> # Password for the 'ghost' user
-      - MYSQL_ROOT_PASSWORD=yourPWw> # Root password (can be different)
-    healthcheck:
-      test: ["CMD", "mysqladmin", "ping", "-h", "localhost"]
-      interval: 10s
-      timeout: 5s
-      retries: 5
-      start_period: 10s
+1. Navigate to `Stacks > Repository`.
+2. Enter the `.git` URL for `docker_projects` and designate `/traefik/docker-compose.yml`.
+3. Launch the stack and check the logs to ensure it's functional.
 
-volumes:
-  ghost-content:
-  mysql-data:
-```
+## Step 2: Deploying the Ghost Blog Stack
+
+1. **Create a New Folder**: Create a new folder to house the files for your new Ghost blog.
+2. **Deploy the Stack**: Navigate to `Stacks > Repository` in Portainer and enter the `.git` URL as you did for the Traefik setup, but this time use `/ghost_blog/docker-compose.yml`.
+3. **Set Environment Variables**: Check the `.env.staging.example` and `.env.production.example` files in the repo at `docker_projects/ghost_blog` to determine which environment you want to use. Assuming you want production right away, set your variables accordingly.
+4. **Deploy**: Deploy the stack, and Traefik will automatically route inbound traffic to the Ghost blog.
+
+## Step 3: Securing Your Ghost Admin Login
+To secure your Ghost admin login, I suggest using Cloudflare Zero Trust tunneling to the `/ghost` login page. If you cannot use Zero Trust or Teleport for two-factor authentication (2FA), ensure that you set a strong password to protect it. Without additional security measures like Zero Trust, brute-force attacks are a potential risk.
+
+This should get you going! See the rest for how to set up your DNS records to access your Ghost blog from the web.
 
 ## Setting Up DNS Records in Cloudflare for a Blog Subdomain
-
-When using Cloudflare as your DNS provider to set up an A record for a VPS serving a blog at a subdomain (e.g., `blog.yourdomain.com`), and ensuring that the main domain (e.g., `yourdomain.com`) routes to a different web server, here’s how you can configure your DNS settings. Additionally, I'll cover setting up a CNAME record for `www.blog.yourdomain.com` rerouting to your blog for completeness.
 
 ### Step 1: Add an A Record for the Blog Subdomain
 
@@ -209,40 +84,50 @@ When using Cloudflare as your DNS provider to set up an A record for a VPS servi
 2. **Navigate to the DNS Management Section**: Find the DNS settings page.
 3. **Create an A Record**:
    - **Type**: Select "A" from the dropdown menu.
-   - **Name**: Enter `blog` as the name. Cloudflare automatically appends the domain to it, resulting in `blog.yourdomain.com`.
-   - **IPv4 address**: Enter the IPv4 address of your VPS server where the blog is hosted.
-   - **TTL**: Choose "Auto" or specify your preferred TTL value.
-   - **Proxy status**: Decide if you want the traffic to be proxied through Cloudflare (orange cloud icon) for additional features like performance optimization and security, or DNS only (grey cloud icon). Proxied is recommended for most cases.
-   - **Save**: Add the record by clicking on the "Save" button.
+   - **Name**: Enter `blog` as the name. Cloudflare automatically appends the domain, resulting in `blog.yourdomain.com`.
+   - **IPv4 address**: Enter the IP address of your VPS where the blog is hosted.
+   - **Proxy status**: Decide if you want the traffic proxied through Cloudflare (recommended for additional security and performance optimization).
+   - **Save**: Add the record by clicking "Save".
 
 ### Step 2: Configure CNAME Record for WWW Subdomain
 
-If you want `www.blog.yourdomain.com` to reroute to `blog.yourdomain.com`, you should create a CNAME record:
+If you want `www.blog.yourdomain.com` to reroute to `blog.yourdomain.com`, create a CNAME record:
 
 1. **Create a CNAME Record**:
-   - **Type**: Select "CNAME" from the dropdown menu.
-   - **Name**: Enter `www.blog` as the name. This will automatically become `www.blog.yourdomain.com`.
-   - **Target**: Enter `blog.yourdomain.com` as the target. This is where the CNAME points to.
-   - **TTL**: Choose "Auto" or your preferred TTL.
-   - **Proxy status**: As with the A record, decide on the proxy status. Typically, you'd keep it consistent with what you chose for your A record.
-   - **Save**: Click on the "Save" button to add the CNAME record.
-
-### Step 3: Ensure Main Domain Routes Correctly
-
-Since you mentioned wanting the main domain to route to a different webserver, make sure you have an appropriate A record (or CNAME, depending on your setup) for `yourdomain.com` pointing to the IP address of the different webserver:
-
-- **Type**: A
-- **Name**: `@` (represents your root domain, `yourdomain.com`)
-- **IPv4 address**: The IP address of the different web server
-- **TTL**: Auto or your preference
-- **Proxy status**: Decide based on your needs
+   - **Type**: Select "CNAME".
+   - **Name**: Enter `www.blog`.
+   - **Target**: Enter `blog.yourdomain.com`.
+   - **Proxy status**: Typically, keep it consistent with your A record.
+   - **Save**: Click "Save" to add the record.
 
 ### Additional Notes
 
-- **Cloudflare Proxy**: If you enable Cloudflare's proxy (orange cloud), it will also provide additional features like DDoS protection and CDN services. This might slightly alter how you configure your web server or application, especially regarding SSL/TLS certificates and headers.
-- **SSL/TLS Configuration**: Ensure you have configured SSL/TLS certificates for your domain and subdomains to serve traffic over HTTPS. Cloudflare offers flexible SSL settings and can automatically provision certificates for domains proxied through it.
+- **SSL/TLS Configuration**: Ensure SSL/TLS certificates are set up for secure connections. Cloudflare offers flexible SSL settings for domains proxied through it.
 
-After setting up these DNS records in Cloudflare, you'll have `blog.yourdomain.com` pointing to your VPS (and `www.blog.yourdomain.com` redirecting to it), while `yourdomain.com` points to a different web server, allowing you to serve content from two separate sources under the same domain.
+## Configuring a Firewall on a Digital Ocean Droplet
+
+### Step 1: Enable UFW and Set Defaults
+
+This sets the firewall to deny all incoming connections by default.
+
+### Step 2: Allow Necessary Ports
+
+Allow traffic for:
+- **SSH (Port 22)**: To manage your server.
+- **HTTP (Port 80) and HTTPS (Port 443)**: For web traffic.
+
+For MySQL, allow connections only from the application server if necessary:
+
+### Step 3: Enable UFW
+
+### Step 4: Verify Firewall Status
+
+### Best Practices for Firewall Configuration
+
+- **Principle of Least Privilege**: Open only essential ports.
+- **Secure SSH Access**: Change the SSH port from 22 to a non-standard port and use key-based authentication.
+- **Database Security**: Limit MySQL access to localhost or use an SSH tunnel for remote connections.
+
 
 
 ## Configuring a Firewall on a Digital Ocean Droplet
