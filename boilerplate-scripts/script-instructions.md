@@ -9,15 +9,11 @@ wget https://raw.githubusercontent.com/bmurrtech/how-to-homelab/refs/heads/main/
 
 ### Make it executable:
 ```
-bash
-Copy
 chmod +x fail2ban-setup.sh
 ```
 
 ### Run as root or via sudo:
 ```
-bash
-Copy
 sudo ./fail2ban-setup.sh
 ```
 
@@ -34,8 +30,6 @@ The script will:
 
 ### You can check Fail2ban status anytime with:
 ```
-bash
-Copy
 sudo fail2ban-client status
 sudo fail2ban-client status sshd
 sudo fail2ban-client status nginx-http-auth
