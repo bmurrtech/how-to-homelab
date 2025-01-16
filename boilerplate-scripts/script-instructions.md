@@ -2,8 +2,6 @@
 Save the script above to a file using wget:
 
 ```
-bash
-Copy
 wget https://raw.githubusercontent.com/bmurrtech/how-to-homelab/refs/heads/main/boilerplate-scripts/fail2ban-NGINX.sh -O fail2ban-setup.sh
 ```
 
