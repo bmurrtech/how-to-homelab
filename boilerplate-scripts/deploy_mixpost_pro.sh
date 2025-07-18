@@ -11,16 +11,19 @@ NC='\033[0m' # No Color
 
 # Validate script integrity
 validate_script() {
-    # Check if this file contains HTML (indicating download failure)
-    if grep -q "<!DOCTYPE html>" "$0" 2>/dev/null || grep -q "<html>" "$0" 2>/dev/null; then
+    # Check only the first 10 lines for HTML content (indicating download failure)
+    local header
+    header=$(head -n 10 "$0")
+    
+    if echo "$header" | grep -q "<!DOCTYPE html>" || echo "$header" | grep -q "<html>"; then
         echo -e "${RED}❌ ERROR: This script file contains HTML content instead of bash code.${NC}"
         echo -e "${YELLOW}This usually means the download URL was incorrect or the file doesn't exist.${NC}"
         echo -e "${YELLOW}Please check:${NC}"
         echo -e "  1. The GitHub repository URL is correct"
-        echo -e "  2. The file path 'scripts/deploy_mixpost_pro.sh' exists in the repository"
+        echo -e "  2. The file path 'boilerplate-scripts/deploy_mixpost_pro.sh' exists in the repository"
         echo -e "  3. The repository is public or you have access"
         echo -e "${YELLOW}Correct download format:${NC}"
-        echo -e "  wget -O deploy_mixpost_pro.sh https://raw.githubusercontent.com/USERNAME/REPOSITORY/main/scripts/deploy_mixpost_pro.sh"
+        echo -e "  wget -O deploy_mixpost_pro.sh https://raw.githubusercontent.com/bmurrtech/how-to-homelab/main/boilerplate-scripts/deploy_mixpost_pro.sh"
         exit 1
     fi
     
