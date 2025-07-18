@@ -6,17 +6,23 @@ A universal, cloud-agnostic deployment script for [Mixpost Pro](https://mixpost.
 
 ### 1. Download and Run (One Command)
 
-> **Note:** Replace `YOUR_USERNAME` with your actual GitHub username or organization in the URLs below.
+> **Note:** Replace `YOUR_USERNAME` and `YOUR_REPOSITORY` with your actual GitHub username/organization and repository name in the URLs below.
 
 ```bash
-wget -O deploy_mixpost_pro.sh https://raw.githubusercontent.com/YOUR_USERNAME/YOUR_FILE_DESTINATION/main/scripts/deploy_mixpost_pro.sh && chmod +x deploy_mixpost_pro.sh && ./deploy_mixpost_pro.sh
+wget -O deploy_mixpost_pro.sh https://raw.githubusercontent.com/YOUR_USERNAME/YOUR_REPOSITORY/main/<path_to_script>/deploy_mixpost_pro.sh && chmod +x deploy_mixpost_pro.sh && ./deploy_mixpost_pro.sh
+```
+
+**Example with actual values:**
+```bash
+# Example: If your GitHub username is "john-doe", repository is "mixpost-deployment", and your script is in the folder 'deploy'
+wget -O deploy_mixpost_pro.sh https://raw.githubusercontent.com/john-doe/mixpost-deployment/main/deploy/deploy_mixpost_pro.sh && chmod +x deploy_mixpost_pro.sh && ./deploy_mixpost_pro.sh
 ```
 
 ### 2. Step by Step
 
 ```bash
-# Download the script
-wget https://raw.githubusercontent.com/YOUR_USERNAME/YOUR_FILE_DESTINATION/main/scripts/deploy_mixpost_pro.sh
+# Download the script (replace YOUR_USERNAME, YOUR_REPOSITORY, and <path_to_script> with actual values)
+wget -O deploy_mixpost_pro.sh https://raw.githubusercontent.com/YOUR_USERNAME/YOUR_REPOSITORY/main/<path_to_script>/deploy_mixpost_pro.sh
 
 # Make it executable
 chmod +x deploy_mixpost_pro.sh
@@ -32,6 +38,44 @@ chmod +x deploy_mixpost_pro.sh
 
 # For a clean reinstall (removes all data/volumes)
 ./deploy_mixpost_pro.sh --force
+```
+
+### 3. Verify Script Before Running (Recommended)
+
+For security, always verify the script content before execution:
+
+```bash
+# Download the script
+wget -O deploy_mixpost_pro.sh https://raw.githubusercontent.com/YOUR_USERNAME/YOUR_REPOSITORY/main/scripts/deploy_mixpost_pro.sh
+
+# Verify the script is valid bash (should show #!/usr/bin/env bash)
+head -1 deploy_mixpost_pro.sh
+
+# Check file size (should be around 30KB+)
+ls -lh deploy_mixpost_pro.sh
+
+# Optionally, review the script content
+less deploy_mixpost_pro.sh
+
+# Make executable and run
+chmod +x deploy_mixpost_pro.sh
+./deploy_mixpost_pro.sh
+```
+
+### 4. Alternative Download Methods
+
+If the wget method fails, try these alternatives:
+
+```bash
+# Using curl instead of wget
+curl -O https://raw.githubusercontent.com/YOUR_USERNAME/YOUR_REPOSITORY/main/scripts/deploy_mixpost_pro.sh
+chmod +x deploy_mixpost_pro.sh
+./deploy_mixpost_pro.sh
+
+# Or download to a specific filename with curl
+curl -o deploy_mixpost_pro.sh https://raw.githubusercontent.com/YOUR_USERNAME/YOUR_REPOSITORY/main/scripts/deploy_mixpost_pro.sh
+chmod +x deploy_mixpost_pro.sh
+./deploy_mixpost_pro.sh
 ```
 
 ## Features
@@ -226,6 +270,46 @@ cd ~/mixpost && docker compose pull && docker compose up -d
 ```
 
 ## Troubleshooting
+
+### Script Download Issues
+
+If you encounter errors like `syntax error near unexpected token 'newline'` or `<!DOCTYPE html>`, the script download failed:
+
+**Common Causes:**
+- Incorrect GitHub username or repository name in the URL
+- Repository is private and you don't have access
+- File path doesn't exist in the repository
+- Network connectivity issues
+
+**Solutions:**
+1. **Verify the URL**: Make sure you replace `YOUR_USERNAME` and `YOUR_REPOSITORY` with the actual values
+2. **Check the repository**: Ensure the file exists at `scripts/deploy_mixpost_pro.sh` in your repository
+3. **Try alternative download methods**:
+   ```bash
+   # Method 1: Direct browser download
+   # Navigate to the raw file URL in your browser and save as deploy_mixpost_pro.sh
+   
+   # Method 2: Use curl instead of wget
+   curl -L -o deploy_mixpost_pro.sh https://raw.githubusercontent.com/YOUR_USERNAME/YOUR_REPOSITORY/main/scripts/deploy_mixpost_pro.sh
+   
+   # Method 3: Clone the repository
+   git clone https://github.com/YOUR_USERNAME/YOUR_REPOSITORY.git
+   cd YOUR_REPOSITORY/scripts
+   chmod +x deploy_mixpost_pro.sh
+   ./deploy_mixpost_pro.sh
+   ```
+
+4. **Validate the downloaded file**:
+   ```bash
+   # Check if the file starts with #!/usr/bin/env bash
+   head -1 deploy_mixpost_pro.sh
+   
+   # Check file size (should be > 1KB)
+   ls -la deploy_mixpost_pro.sh
+   
+   # Look for HTML content (indicates failed download)
+   grep -i "DOCTYPE\|<html>" deploy_mixpost_pro.sh
+   ```
 
 ### Sudo Access Issues
 - The script requires sudo privileges. If you get permission errors, make sure your user is in the sudo group.
