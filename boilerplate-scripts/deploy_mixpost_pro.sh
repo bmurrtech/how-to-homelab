@@ -9,6 +9,52 @@ YELLOW='\033[0;33m'
 BLUE='\033[0;34m'
 NC='\033[0m' # No Color
 
+# Validate script integrity
+validate_script() {
+    # Check if this file contains HTML (indicating download failure)
+    if grep -q "<!DOCTYPE html>" "$0" 2>/dev/null || grep -q "<html>" "$0" 2>/dev/null; then
+        echo -e "${RED}❌ ERROR: This script file contains HTML content instead of bash code.${NC}"
+        echo -e "${YELLOW}This usually means the download URL was incorrect or the file doesn't exist.${NC}"
+        echo -e "${YELLOW}Please check:${NC}"
+        echo -e "  1. The GitHub repository URL is correct"
+        echo -e "  2. The file path 'scripts/deploy_mixpost_pro.sh' exists in the repository"
+        echo -e "  3. The repository is public or you have access"
+        echo -e "${YELLOW}Correct download format:${NC}"
+        echo -e "  wget -O deploy_mixpost_pro.sh https://raw.githubusercontent.com/USERNAME/REPOSITORY/main/scripts/deploy_mixpost_pro.sh"
+        exit 1
+    fi
+    
+    # Check if script starts with proper shebang
+    if ! head -1 "$0" | grep -q "^#!/"; then
+        echo -e "${RED}❌ ERROR: Invalid script format. The file may be corrupted.${NC}"
+        echo -e "${YELLOW}Please re-download the script using the correct URL.${NC}"
+        exit 1
+    fi
+}
+
+# Run validation
+validate_script
+
+# Check internet connectivity and GitHub access
+check_connectivity() {
+    echo -e "${GREEN}🌐 Checking internet connectivity...${NC}"
+    
+    # Test basic internet connectivity
+    if ! curl -s --connect-timeout 10 https://www.google.com > /dev/null; then
+        echo -e "${RED}❌ No internet connection detected${NC}"
+        echo -e "${YELLOW}Please check your network connection and try again.${NC}"
+        exit 1
+    fi
+    
+    # Test GitHub accessibility
+    if ! curl -s --connect-timeout 10 https://api.github.com > /dev/null; then
+        echo -e "${YELLOW}⚠️ Warning: Cannot reach GitHub API. This may affect Docker image downloads.${NC}"
+        echo -e "${YELLOW}Continuing anyway, but deployment may fail if GitHub is inaccessible.${NC}"
+    fi
+    
+    echo -e "${GREEN}✅ Internet connectivity confirmed${NC}"
+}
+
 # --- Helper: show usage
 usage() {
     cat <<EOF
@@ -142,6 +188,9 @@ echo -e "${BLUE}==========================================${NC}"
 echo -e "${GREEN}This script will deploy Mixpost Pro on Ubuntu${NC}"
 echo -e "${GREEN}Minimum requirements: 2 CPUs, 4GB RAM${NC}"
 echo
+
+# Check internet connectivity first
+check_connectivity
 
 # Check for sudo privileges
 if ! sudo -v; then
@@ -662,26 +711,47 @@ else
     fi
 fi
 
-# Determine docker compose command
+# Determine docker compose command with better error handling
+echo -e "${GREEN}🔍 Detecting Docker Compose version...${NC}"
 if [[ "$USE_SUDO" == true ]]; then
     # Check which version of docker-compose is available
     if sudo docker compose version >/dev/null 2>&1; then
         DOCKER_COMPOSE_CMD="sudo docker compose"
-    elif command -v docker-compose >/dev/null 2>&1; then
+        echo -e "${GREEN}✅ Using Docker Compose Plugin (docker compose)${NC}"
+    elif sudo docker-compose version >/dev/null 2>&1; then
         DOCKER_COMPOSE_CMD="sudo docker-compose"
+        echo -e "${GREEN}✅ Using Docker Compose Standalone (docker-compose)${NC}"
     else
-        echo -e "${RED}Neither 'docker compose' nor 'docker-compose' found. Please install Docker Compose.${NC}"
-        exit 1
+        echo -e "${RED}❌ Neither 'docker compose' nor 'docker-compose' found.${NC}"
+        echo -e "${YELLOW}Installing Docker Compose Plugin...${NC}"
+        sudo apt update
+        if sudo apt install -y docker-compose-plugin; then
+            DOCKER_COMPOSE_CMD="sudo docker compose"
+            echo -e "${GREEN}✅ Docker Compose Plugin installed successfully${NC}"
+        else
+            echo -e "${RED}❌ Failed to install Docker Compose. Please install manually.${NC}"
+            exit 1
+        fi
     fi
 else
     # Check which version of docker-compose is available
     if docker compose version >/dev/null 2>&1; then
         DOCKER_COMPOSE_CMD="docker compose"
-    elif command -v docker-compose >/dev/null 2>&1; then
+        echo -e "${GREEN}✅ Using Docker Compose Plugin (docker compose)${NC}"
+    elif docker-compose version >/dev/null 2>&1; then
         DOCKER_COMPOSE_CMD="docker-compose"
+        echo -e "${GREEN}✅ Using Docker Compose Standalone (docker-compose)${NC}"
     else
-        echo -e "${RED}Neither 'docker compose' nor 'docker-compose' found. Please install Docker Compose.${NC}"
-        exit 1
+        echo -e "${RED}❌ Neither 'docker compose' nor 'docker-compose' found.${NC}"
+        echo -e "${YELLOW}Installing Docker Compose Plugin...${NC}"
+        sudo apt update
+        if sudo apt install -y docker-compose-plugin; then
+            DOCKER_COMPOSE_CMD="docker compose"
+            echo -e "${GREEN}✅ Docker Compose Plugin installed successfully${NC}"
+        else
+            echo -e "${RED}❌ Failed to install Docker Compose. Please install manually.${NC}"
+            exit 1
+        fi
     fi
 fi
 
