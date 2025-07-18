@@ -6,10 +6,11 @@ A universal, cloud-agnostic deployment script for [Mixpost Pro](https://mixpost.
 
 ### 1. Download and Run (One Command)
 
-> **Note:** Replace `YOUR_USERNAME` and `YOUR_REPOSITORY` with your actual GitHub username/organization and repository name in the URLs below.
+> **Note:** Replace `YOUR_USERNAME` and `YOUR_REPOSITORY` with your actual GitHub username/organization and repository name in the URLs below. Or, just use my repo script.
 
+**My Repo Script**
 ```bash
-wget -O deploy_mixpost_pro.sh https://raw.githubusercontent.com/YOUR_USERNAME/YOUR_REPOSITORY/main/<path_to_script>/deploy_mixpost_pro.sh && chmod +x deploy_mixpost_pro.sh && ./deploy_mixpost_pro.sh
+wget -O deploy_mixpost_pro.sh https://raw.githubusercontent.com/bmurrtech/how-to-homelab/main/boilerplate-scripts/deploy_mixpost_pro.sh && chmod +x deploy_mixpost_pro.sh && ./deploy_mixpost_pro.sh
 ```
 
 **Example with actual values:**
