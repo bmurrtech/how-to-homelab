@@ -1,116 +1,137 @@
-## How to Use Fail2ban Script
-Save the script above to a file using wget:
+# How to Use the Lightweight Fail2ban Installer
 
-```
-wget https://raw.githubusercontent.com/bmurrtech/how-to-homelab/refs/heads/main/boilerplate-scripts/fail2ban-NGINX.sh -O fail2ban-setup.sh
-```
+Save the script locally (rename if you like):
 
-### Make it executable:
-```
-chmod +x fail2ban-setup.sh
+```bash
+wget https://raw.githubusercontent.com/bmurrtech/how-to-homelab/refs/heads/main/boilerplate-scripts/f2b-install.sh -O f2b-install.sh
+chmod +x f2b-install.sh
 ```
 
-### Run as root or via sudo:
-```
-sudo ./fail2ban-setup.sh
+Run as root (or via sudo):
+
+```bash
+sudo ./f2b-install.sh [flags...]
 ```
 
-It will ask for the IP address(es) you want to whitelist. Nothing will appear as you type (hidden input).  
-Press Enter when done.  
-The script will:
+This installer focuses on **outside-only** protection. By default it:
+- Whitelists loopback and **RFC1918** ranges (10/8, 172.16/12, 192.168/16) so you don’t lock yourself out from inside your network.
+- Auto-picks `nftables-multiport` (or falls back to `iptables-multiport`).
+- Enables only “externally relevant” jails if the service exists: **sshd**, **postfix**, **dovecot**, **sieve**, **coturn**.
+- Leaves **nginx** jails **disabled** unless you explicitly enable them (recommended only if your logs show **real client IPs**, not just Cloudflare IPs).
 
-- Install Fail2ban,  
-- Create/overwrite /etc/fail2ban/jail.local with a sample configuration (including SSH, NGINX, and a custom rate-limit example),  
-- Insert the IP(s) you provided into the ignoreip directive,  
-- Restart Fail2ban,  
-- Remove its own temporary log,  
-- And self-delete for security.  
+---
 
-### You can check Fail2ban status anytime with:
+## Quickstart Scenarios (with flags)
+
+### 1) Default (home / on-prem)
+RFC1918 is auto-whitelisted; no extra flags needed.
+
+```bash
+sudo ./f2b-install.sh
 ```
+
+### 2) Cloud VM — whitelist your public IP for SSH
+```bash
+sudo ./f2b-install.sh --whitelist "203.0.113.7"
+```
+
+### 3) Multiple IPs/CIDRs
+Comma-separated **or** repeat the flag:
+```bash
+sudo ./f2b-install.sh --whitelist "203.0.113.7,198.51.100.10/32"
+# or
+sudo ./f2b-install.sh --whitelist 203.0.113.7 --whitelist 198.51.100.10/32
+```
+
+### 4) Load a list from file
+(One IP/CIDR per line; `#` comments allowed.)
+```bash
+echo -e "203.0.113.7\n2001:db8::/48" > /root/allow.txt
+sudo ./f2b-install.sh --whitelist-file /root/allow.txt
+```
+
+### 5) Cloud-only host — do **not** auto-whitelist RFC1918
+(Use if the server has no LAN peers and you want stricter behavior.)
+```bash
+sudo ./f2b-install.sh --no-rfc1918
+```
+
+### 6) Enable nginx jails (only if logs contain real client IPs)
+If you’ve configured `real_ip_header CF-Connecting-IP` and `set_real_ip_from` for Cloudflare ranges:
+```bash
+sudo ./f2b-install.sh --enable-nginx
+```
+
+> Tip: If your nginx access/error logs still show Cloudflare IPs, keep nginx jails **disabled** and rely on Cloudflare WAF/rate-limits.
+
+---
+
+## What the Script Does
+
+- Installs Fail2ban
+- Writes `/etc/fail2ban/jail.local` with:
+  - Your **ignoreip** set to loopback + RFC1918 (unless `--no-rfc1918`) + any `--whitelist`/`--whitelist-file` entries
+  - Light defaults: `backend=systemd`, `bantime=1h`, `findtime=10m`, `maxretry=6`
+- Adds modular jails in `/etc/fail2ban/jail.d/` for services actually present:
+  - `sshd`, `postfix`, `dovecot`, `sieve` (always created), `coturn` (if installed)
+  - `nginx` jails are created **disabled** unless `--enable-nginx`
+- Enables and starts Fail2ban
+
+---
+
+## Verify / Operate
+
+Check overall status:
+```bash
 sudo fail2ban-client status
-sudo fail2ban-client status sshd
-sudo fail2ban-client status nginx-http-auth
-# etc.
 ```
 
-### Note
+Check a specific jail:
+```bash
+sudo fail2ban-client status sshd
+sudo fail2ban-client status dovecot
+sudo fail2ban-client status postfix
+sudo fail2ban-client status sieve
+sudo fail2ban-client status coturn
+```
 
-- Update and maintain /etc/fail2ban/jail.local for any additional jails or configuration changes.  
-- If your home/VPN IP changes, you must update the ignoreip line accordingly and restart Fail2ban.  
-- Make sure you fully understand the consequences of removing the script and logs: once deleted, they are not recoverable.
+Emergency unban (from console):
+```bash
+sudo fail2ban-client set <jail> unbanip <IP>
+# worst case:
+sudo fail2ban-client unban --all
+```
 
-## Fail2ban Configuration for Self-Hosted Tools (n8n, NocoDB, etc.)
+---
 
-Fail2ban operates by scanning logs for suspicious activity and banning IPs that exceed certain thresholds. Because of this, certain web services—such as n8n, NocoDB, or other self-hosted tools—might inadvertently trigger Fail2ban jails if their logs contain entries that match Fail2ban’s ban criteria. This can happen for example if:
+## Updating Your Whitelist Later
 
-### Potential Causes of Fail2ban Triggers
+Edit `/etc/fail2ban/jail.local` and append IPs/CIDRs to `ignoreip` (space-separated), then:
 
-- The service’s health checks or API calls appear as repeated “failures” in the logs.
-- The service experiences periodic bursts of traffic (e.g., from integrations or cron jobs).
-- The service uses an authentication mechanism that logs multiple “failed” events which fail2ban’s filters interpret as malicious traffic.
+```bash
+sudo systemctl restart fail2ban
+```
 
-### Considerations and Potential Workarounds
+If you maintain a file of trusted IPs, re-run the installer with `--whitelist-file /path/to/file` (it’s idempotent and safe to rerun).
 
-1. ### Whitelist Your Internal/Trusted IP
-   If n8n, NocoDB, or other tools run behind a reverse proxy such as NGINX and traffic always comes from a specific internal IP or Docker network, you could add that IP/range to the Fail2ban ignoreip list. This ensures Fail2ban doesn’t ban traffic from those known safe internal addresses.
+---
 
-   #### Pros:
-   + Quick and easy solution if you have static IPs or well-defined networks.
+## Notes for Reverse-Proxied Apps (n8n, NocoDB, etc.)
 
-   #### Cons:
-   + If your legitimate service can be accessed from multiple or dynamic IP addresses, you’d have to keep updating your whitelist.
+- If behind Cloudflare or another proxy, ensure your app/nginx logs **real client IPs** before enabling nginx jails (`--enable-nginx`), or just keep them off and use your proxy/WAF for HTTP brute-force controls.
+- For apps that spam “failed” log entries (health checks, API bursts), consider:
+  - Whitelisting your internal/proxy subnet in `ignoreip`
+  - Raising `maxretry`/`findtime`
+  - Creating a small custom filter that ignores known-good user-agents/paths
 
-2. ### Create a Separate Fail2ban Filter or Jail Exclusion
-   You can set up Fail2ban so that it does not interpret certain patterns in the logs as malicious. For instance, you could either:
+---
 
-   + **Create a Custom Filter**: Write a filter that specifically ignores the log lines from n8n or NocoDB.
-   + **Disable/Skip certain jails**: If there is a jail targeting NGINX error logs or a particular log path, ensure that the lines from your known web service do not match the “fail” patterns.
+## Troubleshooting
 
-   #### Example: Excluding Known Service Patterns
-   In the custom filter or jail config, you can fine-tune the regex so that it either excludes certain user agents, paths, or request patterns that are known to be legitimate traffic from n8n/NocoDB.
+- “I locked myself out” (remote): use your provider’s console/serial to run `fail2ban-client unban --all`, then add your IP to `ignoreip`.
+- coturn logs not found: ensure turnserver logging to `/var/log/turnserver/turnserver.log` is enabled, or update the jail’s `logpath`.
+- nftables vs iptables: the script auto-detects; if you’ve customized, set `banaction` manually in `/etc/fail2ban/jail.local`.
 
-   #### Pros:
-   + Allows you to keep Fail2ban active for other suspicious traffic without accidentally banning a legitimate service.
+---
 
-   #### Cons:
-   + Requires more advanced Fail2ban filter regex configuration.
-   + Ongoing maintenance if the service’s logs or patterns change.
-
-3. ### Adjust the Thresholds (findtime, maxretry, bantime)
-   Sometimes legitimate services cause lots of “fail”-like entries that trigger a ban because the maxretry or findtime is set too aggressively.
-
-   + **Increase maxretry**: This makes Fail2ban more tolerant of repeated requests before banning.
-   + **Increase findtime**: If an IP’s attempts are spread out over a longer window, they might not trigger a ban so easily.
-   + **Lower bantime**: Even if a legitimate service (or user) is banned, it will be re-enabled more quickly.
-
-   This approach can reduce false positives at the risk of being slower to ban truly malicious traffic.
-
-4. ### Create a Dedicated Jail for the Service
-   Alternatively, create a dedicated jail that is specifically tuned for the logs of the web service you want to protect, rather than relying on a broad NGINX or “custom-rate-limit” jail. For example:
-
-   + n8n might have its own logs (if you log errors or auth attempts).
-   + NocoDB might have logs in a separate location.
-
-   A dedicated jail can help focus on the events that truly indicate malicious behavior (like repeated auth failures) rather than routine request patterns.
-
-### Overall Recommendation
-
-If you see legitimate requests from n8n or NocoDB being banned:
-
-1. **Check Fail2ban logs**:
-   + `sudo fail2ban-client status <jail_name>`
-   + Look for which IPs are banned and why.
-
-2. **Identify Patterns**:
-   + If these IPs belong to your own service or come from a known internal network, whitelist them in your ignoreip setting.
-
-3. **Fine-Tune or Create a Custom Filter**:
-   + If the problem persists, modify the relevant jail/filter so that legitimate events do not register as malicious.
-
-4. **Adjust Thresholds**:
-   + Tweak maxretry, findtime, and bantime to find the right balance between security and usability.
-
-Taking these steps helps retain Fail2ban’s protective benefits while preventing it from interfering with legitimate traffic or self-hosted tools like n8n, NocoDB, and similar services.
-
-
+That's it. This keeps things light, blocks outside abuse, and won’t kneecap you on your own network.
