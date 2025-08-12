@@ -1,4 +1,4 @@
-![infra](https://imgur.com/a/DTpqISf)
+![infra](https://i.imgur.com/lAkNUK3.png)
 
 Shield: [![CC BY-NC-SA 4.0][cc-by-nc-sa-shield]][cc-by-nc-sa]
 
