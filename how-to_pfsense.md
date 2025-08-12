@@ -658,9 +658,9 @@ This takes less than a minute and usually resolves the problem without touching 
 
 1. **Move pfSense GUI off WAN:**
    - Ensure pfSense WebGUI is **not** exposed on WAN 443. If needed:
-   +++text
+   ```text
    System > Advanced > Admin Access
-   +++
+   ```
    Set GUI to **LAN only** and/or change its port (e.g., 8443).
 
 2. **Disable any old NAT port-forwards for 80/443** to internal servers (they’ll conflict with HAProxy binding to WAN).
@@ -672,9 +672,9 @@ This takes less than a minute and usually resolves the problem without touching 
 
 ## Step 1 — Install required packages
 
-+++text
+```text
 System > Package Manager > Available Packages
-+++
+```
 - Install **haproxy** (or **haproxy-devel** if you want newer features).
 - Install **acme**.
 
@@ -682,9 +682,9 @@ System > Package Manager > Available Packages
 
 ## Step 2 — ACME (Let’s Encrypt) via Cloudflare DNS-01
 
-+++text
+```text
 Services > Acme Certificates
-+++
+```
 
 1. **Accounts**: Create an ACME account (start with **Let’s Encrypt Staging**, switch to **Production** once validated).
 2. **Add Certificate** for each domain:
@@ -705,9 +705,9 @@ Services > Acme Certificates
 
 ## Step 3 — Define HAProxy Backends
 
-+++text
+```text
 Services > HAProxy > Backends
-+++
+```
 
 Create a backend **per internal app**.
 
@@ -731,9 +731,9 @@ Create a backend **per internal app**.
 
 ## Step 4 — Create HAProxy Frontends
 
-+++text
+```text
 Services > HAProxy > Frontends
-+++
+```
 
 ### A) HTTP Frontend (port 80)
 - **Name:** `fe_http_80`
@@ -767,12 +767,12 @@ Services > HAProxy > Frontends
   - Check **“Add X-Forwarded-For header”** (or add pass-thru below)
 - **Advanced pass-thru** (optional, but recommended):
   - Add:
-    +++text
+    ```text
     http-request set-header X-Forwarded-Proto https if { ssl_fc }
     http-request set-header X-Real-IP %[src]
     # If behind Cloudflare proxy: prefer CF-Connecting-IP as client IP if present
     http-request set-header X-Forwarded-For %[req.hdr(CF-Connecting-IP)] if { req.hdr(CF-Connecting-IP) -m found }
-    +++
+    ```
 
 > If you **prefer TLS passthrough** instead of offload, make the HTTPS frontend **tcp mode**, enable SNI ACLs, and use **“use_backend … if { req.ssl_sni -i cloudronA.domainA.com }”**. You won’t be able to add HTTP headers in tcp mode.
 
@@ -782,9 +782,9 @@ Services > HAProxy > Frontends
 
 1. **Disable any NAT port forwards for 80/443** to internal servers.
 2. HAProxy will bind directly to WAN on :80 and :443 — no extra firewall rule is needed for local services on pfSense, but verify:
-   +++text
+   ```text
    Firewall > Rules > WAN
-   +++
+   ```
    Ensure **pass** to the firewall on ports 80/443 is not blocked by an overly strict policy.  
 3. (Optional but recommended if using Cloudflare proxy) **Restrict WAN 80/443 to Cloudflare IPs only**:
    - Create `Cloudflare_IPv4/IPv6` aliases (URL Table or Network list).
@@ -812,28 +812,28 @@ Services > HAProxy > Frontends
 From a client on the internet (or using a Host header locally):
 
 **HTTP → HTTPS redirect**
-+++bash
+```bash
 curl -I http://cloudronA.domainA.com
-+++
+```
 Expect: `301` redirect to `https://cloudronA.domainA.com/...`
 
 **SNI/cert selection**
-+++bash
+```bash
 echo | openssl s_client -connect your.WAN.IP:443 -servername cloudronB.domainB.com 2>/dev/null | openssl x509 -noout -subject -issuer
-+++
+```
 Verify certificate CN/SAN matches `cloudronB.domainB.com`.
 
 **Host routing**
-+++bash
+```bash
 curl -I -H "Host: cloudronB.domainB.com" http://your.WAN.IP
-+++
+```
 Expect a `301` to `https://cloudronB.domainB.com/...`
 
 **Health checks**
 - In pfSense:
-  +++text
+  ```text
   Services > HAProxy > Stats / Real Time
-  +++
+  ```
   Confirm both backends are **UP**.
 
 ---
