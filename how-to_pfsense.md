@@ -24,7 +24,8 @@ This work is licensed under a
 - [Configure pfSense](#configure-vlans)
 - [How to add additional VLANs to pfSense](#how-to-add-additional-vlanss-to-pfsense)
 - [Guide to pfSense Rules](#pfsense-firewall-rules)
-- [pfSense CE 2.7.0: “Unable to retrieve package information”](#pfSense-CE-2.7.0)
+- [pfSense CE 2.7.0: “Unable to retrieve package information”](#pfSense-CE-2-7-0)
+- [HAProxy for multiple domains on one public IP](#HAProxy)
 
 # How-to Guide about the PfSense firewall
 Why you want a pfSense firewall:
@@ -633,5 +634,271 @@ If you see this again:
 3. Check for updates again.
 
 This takes less than a minute and usually resolves the problem without touching DNS, repo configs, or reinstalling packages.
+
+# HAProxy
+**For multiple domains on one public IP**
+**Goal:** Terminate **:80/:443** on pfSense with **HAProxy**, route by **hostname (SNI/Host header)** to different backends on internal VLANs, and automate **DNS + TLS** with **Cloudflare (DNS-01)**. Works for any number of FQDNs on a single WAN IPv4.
+
+---
+
+## Recommended architecture
+
+- **Firewall/Router:** pfSense (single WAN IPv4)
+- **Packages on pfSense:** `haproxy` (or `haproxy-devel`) and `acme`
+- **Reverse proxy:** HAProxy listens on **80/443** and routes by **Host/SNI** to backends (e.g., `192.168.10.10`, `192.168.20.10`)
+- **DNS & TLS:** Cloudflare DNS. Use **ACME DNS-01** with a **Cloudflare API Token** to issue/renew certs
+
+**Example domains/backends**
+- `cloudronA.domainA.com` → backend **A** at `192.168.10.10`
+- `cloudronB.domainB.com` → backend **B** at `192.168.20.10`
+
+---
+
+## Prerequisites
+
+1. **Move pfSense GUI off WAN:**
+   - Ensure pfSense WebGUI is **not** exposed on WAN 443. If needed:
+   +++text
+   System > Advanced > Admin Access
+   +++
+   Set GUI to **LAN only** and/or change its port (e.g., 8443).
+
+2. **Disable any old NAT port-forwards for 80/443** to internal servers (they’ll conflict with HAProxy binding to WAN).
+
+3. **Cloudflare API token (per zone or multi-zone):**
+   - Create a token with **Zone:DNS:Edit** (and **Zone:Zone:Read** recommended) for each domain.
+
+---
+
+## Step 1 — Install required packages
+
++++text
+System > Package Manager > Available Packages
++++
+- Install **haproxy** (or **haproxy-devel** if you want newer features).
+- Install **acme**.
+
+---
+
+## Step 2 — ACME (Let’s Encrypt) via Cloudflare DNS-01
+
++++text
+Services > Acme Certificates
++++
+
+1. **Accounts**: Create an ACME account (start with **Let’s Encrypt Staging**, switch to **Production** once validated).
+2. **Add Certificate** for each domain:
+   - **Common Name / SANs**: e.g.
+     - `cloudronA.domainA.com`
+     - `cloudronB.domainB.com` (you can create two separate cert entries, one per domain; or one cert per FQDN)
+   - **Challenge Type**: `DNS-01`
+   - **DNS Service**: `Cloudflare`
+   - **API Token**: Paste your Cloudflare token
+3. **Actions list** (important):
+   - Check **“Install certificate”** (so pfSense stores it locally)
+   - Add action: **Restart HAProxy** after renewal
+4. Click **Issue/Renew**. Confirm certs are issued and stored.
+
+**Why DNS-01?** Works even when Cloudflare proxy (orange-cloud) is enabled; no need to open HTTP-01 paths to the origin.
+
+---
+
+## Step 3 — Define HAProxy Backends
+
++++text
+Services > HAProxy > Backends
++++
+
+Create a backend **per internal app**.
+
+**Backend A (be_cloudronA)**
+- **Name:** `be_cloudronA`
+- **Mode:** `http` (if terminating TLS at HAProxy) or `tcp` (if you prefer TLS passthrough)
+- **Servers:**
+  - `server cloudronA 192.168.10.10:443 ssl verify none` *(if end-to-end TLS)*
+  - or `server cloudronA 192.168.10.10:80` *(if HAProxy terminates TLS and forwards HTTP)*
+- **Health Check:**
+  - **Check type:** `HTTP` (if http mode)
+  - **HTTP check method:** `GET /`
+  - **Host header** (optional): `cloudronA.domainA.com`
+
+**Backend B (be_cloudronB)**
+- Same as above but with `192.168.20.10` and host `cloudronB.domainB.com`.
+
+> If you terminate TLS at HAProxy, prefer **http mode** for L7 features (headers, redirects). If you need pure passthrough TLS (no offload), use **tcp mode** and SNI ACLs.
+
+---
+
+## Step 4 — Create HAProxy Frontends
+
++++text
+Services > HAProxy > Frontends
++++
+
+### A) HTTP Frontend (port 80)
+- **Name:** `fe_http_80`
+- **Listen address:** `WAN address` or `0.0.0.0`
+- **Port:** `80`
+- **Type/Mode:** `http`
+- **Rules:** Add a rule to **redirect all HTTP to HTTPS**
+  - **Action:** `http-request redirect scheme https code 301 if !{ ssl_fc }`
+
+### B) HTTPS Frontend (port 443)
+- **Name:** `fe_https_443`
+- **Listen address:** `WAN address` or `0.0.0.0`
+- **Port:** `443`
+- **Type/Mode:** `http` (TLS termination)
+- **SSL offloading:** **Enabled**
+- **Certificates:** Attach both certs issued by ACME:
+  - `cloudronA.domainA.com` cert
+  - `cloudronB.domainB.com` cert  
+  *(HAProxy will select the right one via SNI)*
+
+**ACLs (Host-based)**
+- `host_cloudronA` → **Condition:** `hdr(host) -i cloudronA.domainA.com`
+- `host_cloudronB` → **Condition:** `hdr(host) -i cloudronB.domainB.com`
+
+**Actions (Use backends)**
+- `use_backend be_cloudronA if host_cloudronA`
+- `use_backend be_cloudronB if host_cloudronB`
+
+**Forward real client info to backends**
+- Enable **X-Forwarded-For**:
+  - Check **“Add X-Forwarded-For header”** (or add pass-thru below)
+- **Advanced pass-thru** (optional, but recommended):
+  - Add:
+    +++text
+    http-request set-header X-Forwarded-Proto https if { ssl_fc }
+    http-request set-header X-Real-IP %[src]
+    # If behind Cloudflare proxy: prefer CF-Connecting-IP as client IP if present
+    http-request set-header X-Forwarded-For %[req.hdr(CF-Connecting-IP)] if { req.hdr(CF-Connecting-IP) -m found }
+    +++
+
+> If you **prefer TLS passthrough** instead of offload, make the HTTPS frontend **tcp mode**, enable SNI ACLs, and use **“use_backend … if { req.ssl_sni -i cloudronA.domainA.com }”**. You won’t be able to add HTTP headers in tcp mode.
+
+---
+
+## Step 5 — Firewall cleanup & bindings
+
+1. **Disable any NAT port forwards for 80/443** to internal servers.
+2. HAProxy will bind directly to WAN on :80 and :443 — no extra firewall rule is needed for local services on pfSense, but verify:
+   +++text
+   Firewall > Rules > WAN
+   +++
+   Ensure **pass** to the firewall on ports 80/443 is not blocked by an overly strict policy.  
+3. (Optional but recommended if using Cloudflare proxy) **Restrict WAN 80/443 to Cloudflare IPs only**:
+   - Create `Cloudflare_IPv4/IPv6` aliases (URL Table or Network list).
+   - Add **WAN** rules allowing **TCP 80/443** **only** from those aliases, **block** others.
+
+---
+
+## Step 6 — Cloudflare DNS
+
+**A records**
+- Create A records:
+  - `cloudronA.domainA.com` → **your WAN IPv4**
+  - `cloudronB.domainB.com` → **your WAN IPv4**
+- **Proxy status (orange-cloud):**
+  - With **DNS-01** ACME, you may leave them **proxied**.
+  - Ensure HAProxy ciphers/TLS settings are compatible; Cloudflare will connect to your origin.
+
+**API-driven (optional)**
+- If you automate deployments, use the same API token to **upsert** A records via Cloudflare’s DNS API.
+
+---
+
+## Step 7 — Test
+
+From a client on the internet (or using a Host header locally):
+
+**HTTP → HTTPS redirect**
++++bash
+curl -I http://cloudronA.domainA.com
++++
+Expect: `301` redirect to `https://cloudronA.domainA.com/...`
+
+**SNI/cert selection**
++++bash
+echo | openssl s_client -connect your.WAN.IP:443 -servername cloudronB.domainB.com 2>/dev/null | openssl x509 -noout -subject -issuer
++++
+Verify certificate CN/SAN matches `cloudronB.domainB.com`.
+
+**Host routing**
++++bash
+curl -I -H "Host: cloudronB.domainB.com" http://your.WAN.IP
++++
+Expect a `301` to `https://cloudronB.domainB.com/...`
+
+**Health checks**
+- In pfSense:
+  +++text
+  Services > HAProxy > Stats / Real Time
+  +++
+  Confirm both backends are **UP**.
+
+---
+
+## Optional: TLS passthrough (no offload)
+
+If you must keep TLS end-to-end and let backends present their own certs:
+
+- **HTTPS Frontend:** `tcp` mode, **no SSL offloading**
+- **SNI ACLs**:
+  - ACL A: `{ req.ssl_sni -i cloudronA.domainA.com }`
+  - ACL B: `{ req.ssl_sni -i cloudronB.domainB.com }`
+- **use_backend**:
+  - `use_backend be_cloudronA if { req.ssl_sni -i cloudronA.domainA.com }`
+  - `use_backend be_cloudronB if { req.ssl_sni -i cloudronB.domainB.com }`
+- **Backends:** likely `tcp` mode to :443 on each server
+- **Note:** You cannot inject HTTP headers (XFF) in tcp mode. Apps must rely on `proxy_protocol` (if you enable it end-to-end) or accept Cloudflare/edge IPs.
+
+---
+
+## Hardening checklist
+
+- **HTTP→HTTPS** redirect on :80
+- Strong TLS ciphers on HAProxy (if terminating)
+- **X-Forwarded-For/Proto** headers set (or CF-Connecting-IP pass-through)
+- **WAN 80/443** restricted to **Cloudflare IPs** (optional, recommended when proxied)
+- **No direct NAT** to backends for 80/443
+- **HAProxy restart** tied to ACME renewals
+
+---
+
+## Troubleshooting
+
+**Port conflict on 443**
+- Move pfSense GUI off 443 (LAN-only or different port).
+
+**“Site always hits the same backend”**
+- Check **ACLs** (exact FQDN match, case-insensitive `-i`).
+- Ensure **frontend mode** matches your plan (http vs tcp).
+
+**ACME fails**
+- Staging works but Production fails? Re-check Cloudflare token scopes and DNS-01 logs in ACME.
+- If switching from HTTP-01, ensure no port 80 NAT conflicts.
+
+**Real client IP missing**
+- Behind Cloudflare, use `CF-Connecting-IP` header. Update HAProxy pass-thru to set `X-Forwarded-For` from it if present, and configure backends to trust forwarded headers.
+
+---
+
+## Minimal configuration summary
+
+- **Packages:** HAProxy (+devel), ACME
+- **ACME:** DNS-01 via Cloudflare API token; install certs; restart HAProxy on renew
+- **HAProxy:**
+  - **Frontend :80** → 301 redirect to HTTPS
+  - **Frontend :443 (http mode)** with **SSL offload**, multiple certs attached
+  - **ACLs by Host** → **use_backend** per FQDN
+  - **Backends** to VLAN IPs with health checks
+  - **X-Forwarded** headers enabled
+- **DNS:** A records for each FQDN → same WAN IP (proxy optional)
+- **Firewall:** No 80/443 NAT to backends; optional **Cloudflare IP** restriction on WAN
+
+---
+
+That’s it! You now have pfSense+HAProxy serving multiple domains over a single public IP with proper SNI routing, automated Cloudflare DNS and ACME certificates, and a clean path to scale additional hostnames/backends.
+
 
 
