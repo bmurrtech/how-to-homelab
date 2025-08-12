@@ -24,6 +24,7 @@ This work is licensed under a
 - [Configure pfSense](#configure-vlans)
 - [How to add additional VLANs to pfSense](#how-to-add-additional-vlanss-to-pfsense)
 - [Guide to pfSense Rules](#pfsense-firewall-rules)
+- [pfSense CE 2.7.0: “Unable to retrieve package information”](#pfSense-CE-2.7.0)
 
 # How-to Guide about the PfSense firewall
 Why you want a pfSense firewall:
@@ -560,5 +561,77 @@ Fireway Rule Config Screenshots
   - All WAN net to VLAN rules fail
   - VLAN to WAN net is sucessful, but it's not a two-way street (only the VLAN can ping the WAN net)
   - Perhaps a jump machine from LAN net to VLAN net is required for this config?
+
+# pfSense CE 2.7.0
+**“Unable to retrieve package information” or “Up to date” but not updating**
+
+If you’re on **pfSense CE 2.7.0** and the **System > Update** page says *“Up to date”* (or fails with *“Unable to retrieve package information”*) even though a newer release (e.g., **2.7.2**) exists, the issue is often caused by **stale or mismatched certificate trust** between your firewall and the pfSense package servers.
+
+This is a known quirk in 2.7.0 and can be fixed by **rehashing the certificates** so pkg can re-establish a trusted TLS connection to the update repository.
+
+---
+
+## **Quick Fix**
+
+### **1. Open the pfSense console**
+You can use:
+- Physical/serial console
+- SSH to the firewall
+- **Diagnostics > Command Prompt** in the GUI
+
+From the console menu, choose:
+```text
+Option 8) Shell
+```
+
+---
+
+### **2. Refresh the certificate trust store**
+Run:
+```sh
+certctl rehash
+```
+
+This re-reads all CA certificates on the system and updates the trust hash that `pkg` uses for secure repository connections.
+
+---
+
+### **3. Go back to the GUI**
+Navigate to:
+```text
+System > Update
+```
+- Click **Update Settings**.
+- Ensure the **Branch** is set to the latest (e.g., `Latest stable version (2.7.2-RELEASE)`).
+- Click **Save**.
+
+---
+
+### **4. Re-check for updates**
+After saving:
+- Return to the **Update** tab.
+- Click **Check for updates**.
+- The correct latest version (e.g., 2.7.2) should now appear.
+
+---
+
+## **Why This Happens**
+In pfSense CE 2.7.0, the local pkg client can silently fail TLS validation against the update repository if its CA trust hashes are stale. The GUI then incorrectly reports “up to date” or cannot retrieve package info. Running `certctl rehash` forces a refresh of the trust store so pkg can verify the repo server’s certificate chain.
+
+---
+
+## **Tip**
+If you see this again:
+1. Run:
+   ```sh
+   certctl rehash
+   ```
+2. Save your update branch in:
+   ```text
+   System > Update > Update Settings
+   ```
+3. Check for updates again.
+
+This takes less than a minute and usually resolves the problem without touching DNS, repo configs, or reinstalling packages.
 
 
