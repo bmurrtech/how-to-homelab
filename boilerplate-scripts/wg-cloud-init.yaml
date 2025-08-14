@@ -1,0 +1,96 @@
+#cloud-config
+package_update: true
+package_upgrade: true
+ssh_pwauth: false
+disable_root: true
+
+packages:
+  - curl
+  - wget
+  - qrencode
+  - wireguard-tools
+
+write_files:
+  - path: /opt/wg-selfhost.sh
+    owner: root:root
+    permissions: '0750'
+    content: |
+      #!/bin/bash
+      set -euo pipefail
+      export DEBIAN_FRONTEND=noninteractive
+
+      echo "[INFO] Installing WireGuard..."
+      apt-get update -y
+      apt-get install -y wireguard-tools qrencode
+
+      SERVER_IP=$(curl -s http://checkip.amazonaws.com || hostname -I | awk '{print $1}')
+      SERVER_PORT=51820
+      WG_CONF_DIR=/etc/wireguard
+      SERVER_PRIV_KEY=$(wg genkey)
+      SERVER_PUB_KEY=$(echo "$SERVER_PRIV_KEY" | wg pubkey)
+
+      mkdir -p $WG_CONF_DIR
+      umask 077
+      cat > $WG_CONF_DIR/wg0.conf <<EOF
+      [Interface]
+      Address = 10.7.0.1/24
+      SaveConfig = true
+      PostUp = iptables -A FORWARD -i %i -j ACCEPT; iptables -A FORWARD -o %i -j ACCEPT; iptables -t nat -A POSTROUTING -o eth0 -j MASQUERADE
+      PostDown = iptables -D FORWARD -i %i -j ACCEPT; iptables -D FORWARD -o %i -j ACCEPT; iptables -t nat -D POSTROUTING -o eth0 -j MASQUERADE
+      ListenPort = $SERVER_PORT
+      PrivateKey = $SERVER_PRIV_KEY
+      EOF
+
+      chmod 600 $WG_CONF_DIR/wg0.conf
+      systemctl enable wg-quick@wg0
+      systemctl start wg-quick@wg0
+
+      echo "[INFO] WireGuard server installed and running on ${SERVER_IP}:${SERVER_PORT}"
+      echo "[INFO] Run 'sudo bash /opt/wg-selfhost.sh add-client <name>' to add a client."
+
+      # Add simple client add function
+      if ! grep -q 'add-client' "$0"; then
+        cat <<'ADDCLIENT' >> "$0"
+
+      if [[ "$1" == "add-client" && -n "${2:-}" ]]; then
+        CLIENT_NAME="$2"
+        CLIENT_PRIV_KEY=$(wg genkey)
+        CLIENT_PUB_KEY=$(echo "$CLIENT_PRIV_KEY" | wg pubkey)
+        CLIENT_PSK=$(wg genpsk)
+        SERVER_PUB_KEY=$(grep PrivateKey /etc/wireguard/wg0.conf | awk '{print $3}' | wg pubkey)
+        SERVER_IP=$(curl -s http://checkip.amazonaws.com || hostname -I | awk '{print $1}')
+        SERVER_PORT=$(grep ListenPort /etc/wireguard/wg0.conf | awk '{print $3}')
+
+        cat >> /etc/wireguard/wg0.conf <<EOP
+      # BEGIN_PEER $CLIENT_NAME
+      [Peer]
+      PublicKey = $CLIENT_PUB_KEY
+      PresharedKey = $CLIENT_PSK
+      AllowedIPs = 10.7.0.$((2 + $(grep -c "AllowedIPs" /etc/wireguard/wg0.conf)))/32
+      # END_PEER $CLIENT_NAME
+EOP
+
+        cat > /root/${CLIENT_NAME}.conf <<EOC
+      [Interface]
+      PrivateKey = $CLIENT_PRIV_KEY
+      Address = 10.7.0.$((2 + $(grep -c "AllowedIPs" /etc/wireguard/wg0.conf)))/24
+      DNS = 1.1.1.1
+
+      [Peer]
+      PublicKey = $SERVER_PUB_KEY
+      PresharedKey = $CLIENT_PSK
+      Endpoint = $SERVER_IP:$SERVER_PORT
+      AllowedIPs = 0.0.0.0/0, ::/0
+EOC
+
+        systemctl restart wg-quick@wg0
+        echo "[INFO] Client config saved to /root/${CLIENT_NAME}.conf"
+        qrencode -t ansiutf8 < /root/${CLIENT_NAME}.conf
+      fi
+ADDCLIENT
+      fi
+
+runcmd:
+  - [ chmod, +x, /opt/wg-selfhost.sh ]
+
+final_message: "WireGuard prep complete. SSH in and run 'sudo bash /opt/wg-selfhost.sh' to install."
